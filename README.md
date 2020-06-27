@@ -1,21 +1,18 @@
-PaperSpigot [![CI Status](http://ci.destroystokyo.com/buildStatus/icon?job=PaperSpigot)](http://ci.destroystokyo.com/job/PaperSpigot/)
+Bandaid
 ===========
 
-High performance Spigot fork that aims to fix gameplay and mechanics inconsistencies.
-
-[IRC Support and Project Discussion](http://irc.spi.gt/iris/?channels=PaperSpigot)
-
+A PaperSpigot Fork specifically for 1.8.8 designed to expose more of the NMS and optimise.
 
 
 
 How To (Server Admins)
 ------
-Download a copy of Paperclip.jar from our buildserver here:
-https://ci.destroystokyo.com/job/PaperSpigot/
+~~Download a copy of Paperclip.jar from our buildserver here:~~
+~~https://ci.destroystokyo.com/job/PaperSpigot/~~
 
 Run the PaperClip jar directly from your server. Just like old times
 
-PaperSpigot requires **JRE 8** or above.
+Bandaid requires **JRE 8** or above.
 
 
 How To (Compiling From Source)
