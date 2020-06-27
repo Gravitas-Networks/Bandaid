@@ -1,0 +1,224 @@
+From 26062487e5766ae0a35c53355ceab0040b224113 Mon Sep 17 00:00:00 2001
+From: Gatt <zacharygatt@me.com>
+Date: Sat, 27 Jun 2020 16:53:10 +1000
+Subject: [PATCH] Expose more of the NMS and add two new events
+
+
+diff --git a/src/main/java/org/bukkit/entity/Animals.java b/src/main/java/org/bukkit/entity/Animals.java
+index f0dc157d..f971a7dc 100644
+--- a/src/main/java/org/bukkit/entity/Animals.java
++++ b/src/main/java/org/bukkit/entity/Animals.java
+@@ -3,4 +3,4 @@ package org.bukkit.entity;
+ /**
+  * Represents an Animal.
+  */
+-public interface Animals extends Ageable {}
++public interface Animals extends Ageable{}
+diff --git a/src/main/java/org/bukkit/entity/EnderDragon.java b/src/main/java/org/bukkit/entity/EnderDragon.java
+index 609f3ba5..a25c557c 100644
+--- a/src/main/java/org/bukkit/entity/EnderDragon.java
++++ b/src/main/java/org/bukkit/entity/EnderDragon.java
+@@ -1,5 +1,6 @@
+ package org.bukkit.entity;
+ 
++
+ /**
+  * Represents an Ender Dragon
+  */
+diff --git a/src/main/java/org/bukkit/entity/LivingEntity.java b/src/main/java/org/bukkit/entity/LivingEntity.java
+index 48e25089..4fddece8 100644
+--- a/src/main/java/org/bukkit/entity/LivingEntity.java
++++ b/src/main/java/org/bukkit/entity/LivingEntity.java
+@@ -18,6 +18,7 @@ import org.bukkit.projectiles.ProjectileSource;
+  */
+ public interface LivingEntity extends Entity, Damageable, ProjectileSource {
+ 
++
+     /**
+      * Gets the height of the living entity's eyes above its Location.
+      *
+diff --git a/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java b/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
+new file mode 100644
+index 00000000..f22753e0
+--- /dev/null
++++ b/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
+@@ -0,0 +1,69 @@
++package org.bukkit.event.block;
++
++import org.bukkit.block.Block;
++import org.bukkit.entity.Player;
++import org.bukkit.event.Cancellable;
++import org.bukkit.event.HandlerList;
++import org.bukkit.inventory.ItemStack;
++
++import java.util.List;
++
++public class BlockBreakDropItemsEvent extends BlockEvent implements Cancellable {
++    private static final HandlerList handlers = new HandlerList();
++
++    @Override
++    public HandlerList getHandlers() {
++        return handlers;
++    }
++
++    private final Player player;
++    private boolean cancel;
++    private List<ItemStack> drops;
++    private boolean isSilkTouch;
++
++    public BlockBreakDropItemsEvent(Block theBlock, Player player, List<ItemStack> drops, boolean isSilkTouch) {
++        super(theBlock);
++        this.player = player;
++        this.drops = drops;
++        this.isSilkTouch = isSilkTouch;
++    }
++
++    public BlockBreakDropItemsEvent(final Block theBlock, final Player player, List<ItemStack> drops) {
++        super(theBlock);
++        this.player = player;
++        this.drops = drops;
++        this.isSilkTouch = false;
++    }
++
++    public boolean isSilkTouch() {
++        return isSilkTouch;
++    }
++
++    public List<ItemStack> getDrops() {
++        return drops;
++    }
++
++    public void setDrops(List<ItemStack> drops) {
++        this.drops = drops;
++    }
++
++    /**
++     * Gets the Player that is breaking the block involved in this event.
++     *
++     * @return The Player that is breaking the block involved in this event
++     */
++    public Player getPlayer() {
++        return player;
++    }
++
++    public boolean isCancelled() {
++        return cancel;
++    }
++
++    public void setCancelled(boolean cancel) {
++        this.cancel = cancel;
++    }
++
++
++
++}
+diff --git a/src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java b/src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java
+new file mode 100644
+index 00000000..aaf64959
+--- /dev/null
++++ b/src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java
+@@ -0,0 +1,43 @@
++package org.bukkit.event.block;
++
++import org.bukkit.block.Block;
++import org.bukkit.entity.Player;
++import org.bukkit.event.Cancellable;
++import org.bukkit.event.HandlerList;
++
++/**
++ * Called before a Block Destroy Packet is sent to clients. Cancel this event to cancel the packet from being sent.
++ */
++public class BlockPreBreakEvent extends BlockEvent implements Cancellable {
++    private static final HandlerList handlers = new HandlerList();
++
++    @Override
++    public HandlerList getHandlers() {
++        return handlers;
++    }
++
++    private final Player player;
++    private boolean cancel;
++
++    public BlockPreBreakEvent(final Block theBlock, final Player player) {
++        super(theBlock);
++        this.player = player;
++    }
++
++    /**
++     * Gets the Player that is breaking the block involved in this event.
++     *
++     * @return The Player that is breaking the block involved in this event
++     */
++    public Player getPlayer() {
++        return player;
++    }
++
++    public boolean isCancelled() {
++        return cancel;
++    }
++
++    public void setCancelled(boolean cancel) {
++        this.cancel = cancel;
++    }
++}
+diff --git a/src/main/java/org/spigotmc/CustomTimingsHandler.java b/src/main/java/org/spigotmc/CustomTimingsHandler.java
+index 7e89b97b..f393c5c4 100644
+--- a/src/main/java/org/spigotmc/CustomTimingsHandler.java
++++ b/src/main/java/org/spigotmc/CustomTimingsHandler.java
+@@ -23,17 +23,7 @@
+  */
+ package org.spigotmc;
+ 
+-import org.bukkit.Bukkit;
+ import org.bukkit.plugin.AuthorNagException;
+-import org.bukkit.plugin.Plugin;
+-import co.aikar.timings.NullTimingHandler;
+-import co.aikar.timings.Timing;
+-import co.aikar.timings.Timings;
+-import co.aikar.timings.TimingsManager;
+-import sun.reflect.Reflection;
+-
+-import java.lang.reflect.Method;
+-import java.util.logging.Level;
+ 
+ /**
+  * This is here for legacy purposes incase any plugin used it.
+@@ -45,32 +35,12 @@ import java.util.logging.Level;
+  */
+ @Deprecated
+ public final class CustomTimingsHandler {
+-    private final Timing handler;
+ 
+     public CustomTimingsHandler(String name) {
+-        Timing timing;
+-
+-        Plugin plugin = null;
+-        try {
+-             plugin = TimingsManager.getPluginByClassloader(Reflection.getCallerClass(2));
+-        } catch (Exception ignored) {}
+-
+-        new AuthorNagException("Deprecated use of CustomTimingsHandler. Please Switch to Timings.of ASAP").printStackTrace();
+-        if (plugin != null) {
+-            timing = Timings.of(plugin, "(Deprecated API) " + name);
+-        } else {
+-            try {
+-                final Method ofSafe = TimingsManager.class.getMethod("getHandler", String.class, String.class, Timing.class, boolean.class);
+-                timing = (Timing) ofSafe.invoke("Minecraft", "(Deprecated API) " + name, null, true);
+-            } catch (Exception e) {
+-                Bukkit.getLogger().log(Level.SEVERE, "This handler could not be registered");
+-                timing = Timings.NULL_HANDLER;
+-            }
+-        }
+-        handler = timing;
++        new AuthorNagException("Deprecated use of CustomTimingsHandler. Please Switch to Timings.of. Timing Disabled").printStackTrace();
+     }
+ 
+-    public void startTiming() { handler.startTiming(); }
+-    public void stopTiming() { handler.stopTiming(); }
++    public void startTiming() {  }
++    public void stopTiming() {  }
+ 
+ }
+-- 
+2.16.2.windows.1
+

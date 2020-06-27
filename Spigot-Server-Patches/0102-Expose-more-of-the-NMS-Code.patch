@@ -1,0 +1,629 @@
+From 7b02eb02b421d713707d8d434093b8b3c729e369 Mon Sep 17 00:00:00 2001
+From: Gatt <zacharygatt@me.com>
+Date: Sat, 27 Jun 2020 16:52:11 +1000
+Subject: [PATCH] Expose more of the NMS Code
+
+
+diff --git a/src/main/java/net/minecraft/server/Block.java b/src/main/java/net/minecraft/server/Block.java
+index a784e04a..85eadcfd 100644
+--- a/src/main/java/net/minecraft/server/Block.java
++++ b/src/main/java/net/minecraft/server/Block.java
+@@ -1,5 +1,8 @@
+ package net.minecraft.server;
+ 
++import org.bukkit.event.block.BlockBreakDropItemsEvent;
++
++import java.util.Arrays;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Random;
+@@ -574,9 +577,37 @@ public class Block {
+ 
+     public void j() {}
+ 
++
++    // get potential drops for item
++    public ItemStack[] getDrops(World world, EntityHuman entityhuman, BlockPosition blockposition, IBlockData iblockdata, TileEntity tileentity) {
++        if (this.I() && EnchantmentManager.hasSilkTouchEnchantment(entityhuman)) {
++            ItemStack itemstack = this.i(iblockdata);
++            if (itemstack != null) {
++                return new ItemStack[]{itemstack};
++            }
++        }else{
++            int i = EnchantmentManager.getBonusBlockLootEnchantmentLevel(entityhuman);
++            if (!world.isClientSide) {
++                int j = this.getDropCount(i, world.random);
++
++                ItemStack[] droppedItems = new ItemStack[j];
++
++                for (int k = 0; k < j; ++k) {
++                    Item item = this.getDropType(iblockdata, world.random, i);
++                    if (item != null) {
++                        droppedItems[k] = new ItemStack(item, 1, this.getDropData(iblockdata));
++                    }
++                }
++                return droppedItems;
++            }
++        }
++        return new ItemStack[]{};
++    }
++
+     public void a(World world, EntityHuman entityhuman, BlockPosition blockposition, IBlockData iblockdata, TileEntity tileentity) {
+         entityhuman.b(StatisticList.MINE_BLOCK_COUNT[getId(this)]);
+         entityhuman.applyExhaustion(world.paperSpigotConfig.blockBreakExhaustion); // PaperSpigot - Configurable block break exhaustion
++
+         if (this.I() && EnchantmentManager.hasSilkTouchEnchantment(entityhuman)) {
+             ItemStack itemstack = this.i(iblockdata);
+ 
+diff --git a/src/main/java/net/minecraft/server/ChunkProviderServer.java b/src/main/java/net/minecraft/server/ChunkProviderServer.java
+index c4dab42b..e44a982e 100644
+--- a/src/main/java/net/minecraft/server/ChunkProviderServer.java
++++ b/src/main/java/net/minecraft/server/ChunkProviderServer.java
+@@ -32,7 +32,7 @@ public class ChunkProviderServer implements IChunkProvider {
+     public LongHashSet unloadQueue = new LongHashSet(); // CraftBukkit - LongHashSet
+     public Chunk emptyChunk;
+     public IChunkProvider chunkProvider;
+-    private IChunkLoader chunkLoader;
++    public IChunkLoader chunkLoader; // BandaidSpigot - private -> public
+     public boolean forceChunkLoad = false; // CraftBukkit - true -> false
+     public LongObjectHashMap<Chunk> chunks = new LongObjectHashMap<Chunk>();
+     public WorldServer world;
+diff --git a/src/main/java/net/minecraft/server/ChunkRegionLoader.java b/src/main/java/net/minecraft/server/ChunkRegionLoader.java
+index 6b244904..15910bc0 100644
+--- a/src/main/java/net/minecraft/server/ChunkRegionLoader.java
++++ b/src/main/java/net/minecraft/server/ChunkRegionLoader.java
+@@ -17,8 +17,8 @@ import org.apache.logging.log4j.Logger;
+ public class ChunkRegionLoader implements IChunkLoader, IAsyncChunkSaver {
+ 
+     private static final Logger a = LogManager.getLogger();
+-    private Map<ChunkCoordIntPair, NBTTagCompound> b = new ConcurrentHashMap();
+-    private Set<ChunkCoordIntPair> c = Collections.newSetFromMap(new ConcurrentHashMap());
++    public Map<ChunkCoordIntPair, NBTTagCompound> b = new ConcurrentHashMap(); // BandaidSpigot - private -> public
++    public Set<ChunkCoordIntPair> c = Collections.newSetFromMap(new ConcurrentHashMap()); // BandaidSpigot - private -> public
+     private final File d;
+     private boolean e = false;
+ 
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index 2da303fe..b0a8e415 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -12,10 +12,7 @@ import org.bukkit.Location;
+ import org.bukkit.Server;
+ import org.bukkit.TravelAgent;
+ import org.bukkit.block.BlockFace;
+-import org.bukkit.entity.Hanging;
+-import org.bukkit.entity.LivingEntity;
+-import org.bukkit.entity.Painting;
+-import org.bukkit.entity.Vehicle;
++import org.bukkit.entity.*;
+ import co.aikar.timings.SpigotTimings; // Spigot
+ import co.aikar.timings.Timing; // Spigot
+ import org.bukkit.event.entity.EntityCombustByEntityEvent;
+@@ -141,6 +138,11 @@ public abstract class Entity implements ICommandListener {
+     public void inactiveTick() { }
+     // Spigot end
+ 
++
++    // BandaidPaper Start
++    public boolean allowMovement = true, allowCollision = true;
++    // BandaidPaper End
++
+     public int getId() {
+         return this.id;
+     }
+@@ -431,6 +433,7 @@ public abstract class Entity implements ICommandListener {
+ 
+ 
+     public void move(double d0, double d1, double d2) {
++        if (!allowMovement && !(this instanceof EntityHuman)) return;
+         if (this.loadChunks) loadChunks(); // PaperSpigot - Load chunks
+         if (this.noclip) {
+             this.a(this.getBoundingBox().c(d0, d1, d2));
+@@ -1089,6 +1092,7 @@ public abstract class Entity implements ICommandListener {
+ 
+     int numCollisions = 0; // Spigot
+     public void collide(Entity entity) {
++        if (!allowCollision) return;
+         if (entity.passenger != this && entity.vehicle != this) {
+             if (!entity.noclip && !this.noclip) {
+                 double d0 = entity.locX - this.locX;
+diff --git a/src/main/java/net/minecraft/server/EntityInsentient.java b/src/main/java/net/minecraft/server/EntityInsentient.java
+index b82b9847..55cde9f3 100644
+--- a/src/main/java/net/minecraft/server/EntityInsentient.java
++++ b/src/main/java/net/minecraft/server/EntityInsentient.java
+@@ -5,6 +5,7 @@ import java.util.List;
+ import java.util.UUID;
+ 
+ // CraftBukkit start
++import org.bukkit.Sound;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.craftbukkit.entity.CraftLivingEntity;
+ import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+@@ -53,6 +54,14 @@ public abstract class EntityInsentient extends EntityLiving {
+         // CraftBukkit start - default persistance to type's persistance value
+         this.persistent = !isTypeNotPersistent();
+         // CraftBukkit end
++
++        // BandaidPaper Start
++        if (this.z() != null)
++            // get idle sound
++            this.idleSound = this.z();
++
++        // BandaidPaper End
++
+     }
+ 
+     protected void initAttributes() {
+@@ -138,7 +147,7 @@ public abstract class EntityInsentient extends EntityLiving {
+     }
+ 
+     public void x() {
+-        String s = this.z();
++        String s = getIdleSound();
+ 
+         if (s != null) {
+             this.makeSound(s, this.bB(), this.bC());
+diff --git a/src/main/java/net/minecraft/server/EntityLiving.java b/src/main/java/net/minecraft/server/EntityLiving.java
+index c8b4e292..229c371c 100644
+--- a/src/main/java/net/minecraft/server/EntityLiving.java
++++ b/src/main/java/net/minecraft/server/EntityLiving.java
+@@ -14,6 +14,7 @@ import java.util.UUID;
+ import java.util.ArrayList;
+ import com.google.common.base.Function;
+ import com.google.common.collect.Lists;
++import org.bukkit.Sound;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.entity.LivingEntity;
+ import org.bukkit.entity.Vehicle;
+@@ -102,6 +103,8 @@ public abstract class EntityLiving extends Entity {
+     }
+     // Spigot end
+ 
++
++
+     public void G() {
+         this.damageEntity(DamageSource.OUT_OF_WORLD, Float.MAX_VALUE);
+     }
+@@ -118,7 +121,44 @@ public abstract class EntityLiving extends Entity {
+         this.yaw = (float) (Math.random() * 3.1415927410125732D * 2.0D);
+         this.aK = this.yaw;
+         this.S = 0.6F;
++
++        // BandaidPaper Start
++        if (this.bo() != null)
++            this.hurtSound = this.bo();
++
++        if (this.bp() != null)
++            this.deathSound = this.bp();
++        // BandaidPaper End
++
++    }
++
++    // BandaidPaper Start
++    public String idleSound = "", hurtSound = "", deathSound = "";
++
++    public String getIdleSound() {
++        return idleSound;
++    }
++
++    public void setIdleSound(String idleSound) {
++        this.idleSound = idleSound;
++    }
++
++    public String getHurtSound() {
++        return hurtSound;
++    }
++
++    public void setHurtSound(String hurtSound) {
++        this.hurtSound = hurtSound;
++    }
++
++    public String getDeathSound() {
++        return deathSound;
++    }
++
++    public void setDeathSound(String deathSound) {
++        this.deathSound = deathSound;
+     }
++    // BandaidPaper End
+ 
+     protected void h() {
+         this.datawatcher.a(7, Integer.valueOf(0));
+@@ -814,14 +854,14 @@ public abstract class EntityLiving extends Entity {
+                 String s;
+ 
+                 if (this.getHealth() <= 0.0F) {
+-                    s = this.bp();
++                    s = getDeathSound();
+                     if (flag && s != null) {
+                         this.makeSound(s, this.bB(), this.bC());
+                     }
+ 
+                     this.die(damagesource);
+                 } else {
+-                    s = this.bo();
++                    s = getHurtSound();
+                     if (flag && s != null) {
+                         this.makeSound(s, this.bB(), this.bC());
+                     }
+diff --git a/src/main/java/net/minecraft/server/GenericAttributes.java b/src/main/java/net/minecraft/server/GenericAttributes.java
+index 0cc3e2fb..6f738d33 100644
+--- a/src/main/java/net/minecraft/server/GenericAttributes.java
++++ b/src/main/java/net/minecraft/server/GenericAttributes.java
+@@ -13,6 +13,7 @@ public class GenericAttributes {
+     public static final IAttribute maxHealth = (new AttributeRanged((IAttribute) null, "generic.maxHealth", 20.0D, 0.1D,  org.spigotmc.SpigotConfig.maxHealth)).a("Max Health").a(true);
+     public static final IAttribute FOLLOW_RANGE = (new AttributeRanged((IAttribute) null, "generic.followRange", 32.0D, 0.0D, 2048.0D)).a("Follow Range");
+     public static final IAttribute c = (new AttributeRanged((IAttribute) null, "generic.knockbackResistance", 0.0D, 0.0D, 1.0D)).a("Knockback Resistance");
++    public static final IAttribute KNOCKBACK_RESISTANCE = c;
+     public static final IAttribute MOVEMENT_SPEED = (new AttributeRanged((IAttribute) null, "generic.movementSpeed", 0.699999988079071D, 0.0D, org.spigotmc.SpigotConfig.movementSpeed)).a("Movement Speed").a(true);
+     public static final IAttribute ATTACK_DAMAGE = new AttributeRanged((IAttribute) null, "generic.attackDamage", 2.0D, 0.0D, org.spigotmc.SpigotConfig.attackDamage);
+     // Spigot end
+diff --git a/src/main/java/net/minecraft/server/PlayerConnection.java b/src/main/java/net/minecraft/server/PlayerConnection.java
+index 4391ad7e..be296d6e 100644
+--- a/src/main/java/net/minecraft/server/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/PlayerConnection.java
+@@ -266,33 +266,31 @@ public class PlayerConnection implements PacketListenerPlayIn, IUpdatePlayerList
+                     this.lastYaw = to.getYaw();
+                     this.lastPitch = to.getPitch();
+ 
+-                    // Skip the first time we do this
+-                    if (true) { // Spigot - don't skip any move events
+-                        Location oldTo = to.clone();
+-                        PlayerMoveEvent event = new PlayerMoveEvent(player, from, to);
+-                        this.server.getPluginManager().callEvent(event);
+-
+-                        // If the event is cancelled we move the player back to their old location.
+-                        if (event.isCancelled()) {
+-                            this.player.playerConnection.sendPacket(new PacketPlayOutPosition(from.getX(), from.getY(), from.getZ(), from.getYaw(), from.getPitch(), Collections.<PacketPlayOutPosition.EnumPlayerTeleportFlags>emptySet()));
+-                            return;
+-                        }
++                    Location oldTo = to.clone();
++                    PlayerMoveEvent event = new PlayerMoveEvent(player, from, to);
++                    this.server.getPluginManager().callEvent(event);
+ 
+-                        /* If a Plugin has changed the To destination then we teleport the Player
+-                        there to avoid any 'Moved wrongly' or 'Moved too quickly' errors.
+-                        We only do this if the Event was not cancelled. */
+-                        if (!oldTo.equals(event.getTo()) && !event.isCancelled()) {
+-                            this.player.getBukkitEntity().teleport(event.getTo(), PlayerTeleportEvent.TeleportCause.UNKNOWN);
+-                            return;
+-                        }
++                    // If the event is cancelled we move the player back to their old location.
++                    if (event.isCancelled()) {
++                        this.player.playerConnection.sendPacket(new PacketPlayOutPosition(from.getX(), from.getY(), from.getZ(), from.getYaw(), from.getPitch(), Collections.<PacketPlayOutPosition.EnumPlayerTeleportFlags>emptySet()));
++                        return;
++                    }
+ 
+-                        /* Check to see if the Players Location has some how changed during the call of the event.
+-                        This can happen due to a plugin teleporting the player instead of using .setTo() */
+-                        if (!from.equals(this.getPlayer().getLocation()) && this.justTeleported) {
+-                            this.justTeleported = false;
+-                            return;
+-                        }
++                    /* If a Plugin has changed the To destination then we teleport the Player
++                    there to avoid any 'Moved wrongly' or 'Moved too quickly' errors.
++                    We only do this if the Event was not cancelled. */
++                    if (!oldTo.equals(event.getTo()) && !event.isCancelled()) {
++                        this.player.getBukkitEntity().teleport(event.getTo(), PlayerTeleportEvent.TeleportCause.UNKNOWN);
++                        return;
+                     }
++
++                    /* Check to see if the Players Location has some how changed during the call of the event.
++                    This can happen due to a plugin teleporting the player instead of using .setTo() */
++                    if (!from.equals(this.getPlayer().getLocation()) && this.justTeleported) {
++                        this.justTeleported = false;
++                        return;
++                    }
++
+                 }
+ 
+                 if (this.checkMovement && !this.player.dead) {
+diff --git a/src/main/java/net/minecraft/server/PlayerInteractManager.java b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+index 33a0a095..3ef025cc 100644
+--- a/src/main/java/net/minecraft/server/PlayerInteractManager.java
++++ b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+@@ -1,11 +1,18 @@
+ package net.minecraft.server;
+ 
+ // CraftBukkit start
++import org.bukkit.Bukkit;
++import org.bukkit.craftbukkit.inventory.CraftItemStack;
++import org.bukkit.event.block.BlockBreakDropItemsEvent;
+ import org.bukkit.event.block.BlockBreakEvent;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.Event;
+ import org.bukkit.event.block.Action;
++import org.bukkit.event.block.BlockPreBreakEvent;
+ import org.bukkit.event.player.PlayerInteractEvent;
++
++import java.util.ArrayList;
++import java.util.List;
+ // CraftBukkit end
+ 
+ public class PlayerInteractManager {
+@@ -248,17 +255,27 @@ public class PlayerInteractManager {
+ 
+     public boolean breakBlock(BlockPosition blockposition) {
+         // CraftBukkit start - fire BlockBreakEvent
++        // BandaidSpigot Start - fire PreBlockBreakEvent and BlockBreakDropItemsEvent
+         BlockBreakEvent event = null;
++        BlockPreBreakEvent preBreakEvent = null;
++
++        org.bukkit.block.Block block = this.world.getWorld().getBlockAt(blockposition.getX(), blockposition.getY(), blockposition.getZ());
+ 
+         if (this.player instanceof EntityPlayer) {
+-            org.bukkit.block.Block block = this.world.getWorld().getBlockAt(blockposition.getX(), blockposition.getY(), blockposition.getZ());
+ 
++            preBreakEvent = new BlockPreBreakEvent(block, this.player.getBukkitEntity());
+             // Sword + Creative mode pre-cancel
+             boolean isSwordNoBreak = this.gamemode.d() && this.player.bA() != null && this.player.bA().getItem() instanceof ItemSword;
+ 
++            preBreakEvent.setCancelled(isSwordNoBreak);
++
++            this.world.getServer().getPluginManager().callEvent(preBreakEvent);
++
+             // Tell client the block is gone immediately then process events
+             // Don't tell the client if its a creative sword break because its not broken!
+-            if (world.getTileEntity(blockposition) == null && !isSwordNoBreak) {
++
++            // also don't tell the client if the PreBlockBreakEvent is cancelled
++            if (world.getTileEntity(blockposition) == null && !isSwordNoBreak && !preBreakEvent.isCancelled()) {
+                 PacketPlayOutBlockChange packet = new PacketPlayOutBlockChange(this.world, blockposition);
+                 packet.block = Blocks.AIR.getBlockData();
+                 ((EntityPlayer) this.player).playerConnection.sendPacket(packet);
+@@ -276,7 +293,6 @@ public class PlayerInteractManager {
+             if (nmsBlock != null && !event.isCancelled() && !this.isCreative() && this.player.b(nmsBlock)) {
+                 // Copied from block.a(World world, EntityHuman entityhuman, BlockPosition blockposition, IBlockData iblockdata, TileEntity tileentity)
+                 if (!(nmsBlock.I() && EnchantmentManager.hasSilkTouchEnchantment(this.player))) {
+-                    int data = block.getData();
+                     int bonusLevel = EnchantmentManager.getBonusBlockLootEnchantmentLevel(this.player);
+ 
+                     event.setExpToDrop(nmsBlock.getExpDrop(this.world, nmsData, bonusLevel));
+@@ -286,7 +302,7 @@ public class PlayerInteractManager {
+             this.world.getServer().getPluginManager().callEvent(event);
+ 
+             if (event.isCancelled()) {
+-                if (isSwordNoBreak) {
++                if (isSwordNoBreak || preBreakEvent.isCancelled()) {
+                     return false;
+                 }
+                 // Let the client know the block still exists
+@@ -341,6 +357,7 @@ public class PlayerInteractManager {
+                 boolean flag1 = this.player.b(iblockdata.getBlock());
+ 
+                 if (itemstack1 != null) {
++                    // destroy item in hand?
+                     itemstack1.a(this.world, iblockdata.getBlock(), blockposition, this.player);
+                     if (itemstack1.count == 0) {
+                         this.player.ca();
+@@ -348,7 +365,30 @@ public class PlayerInteractManager {
+                 }
+ 
+                 if (flag && flag1) {
+-                    iblockdata.getBlock().a(this.world, this.player, blockposition, iblockdata, tileentity);
++                    // BandaidPaper Start - custom item drops
++                    ItemStack[] droppedItems = iblockdata.getBlock().getDrops(this.world, this.player, blockposition, iblockdata, tileentity);
++                    if (droppedItems.length > 0){
++                        List<org.bukkit.inventory.ItemStack> bukkitItemDrops = new ArrayList<>();
++                        for (ItemStack dI : droppedItems) {
++                            bukkitItemDrops.add(CraftItemStack.asBukkitCopy(dI));
++                        }
++
++                        BlockBreakDropItemsEvent blockBreakDropItemsEvent = new BlockBreakDropItemsEvent(block, player.getBukkitEntity().getPlayer(),
++                                bukkitItemDrops, EnchantmentManager.hasSilkTouchEnchantment(player));
++
++                        this.world.getServer().getPluginManager().callEvent(blockBreakDropItemsEvent);
++
++                        if (!blockBreakDropItemsEvent.isCancelled()){
++                            for (org.bukkit.inventory.ItemStack drop : blockBreakDropItemsEvent.getDrops()) {
++                                Block.a(this.world, blockposition, CraftItemStack.asNMSCopy(drop));
++                            }
++                        }
++
++
++                    }
++                    // BandaidPaper end
++
++                    // iblockdata.getBlock().a(this.world, this.player, blockposition, iblockdata, tileentity);
+                 }
+             }
+             
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 69485fa6..e9d6390f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -1001,6 +1001,23 @@ public final class CraftServer implements Server {
+             } catch (ExceptionWorldConflict ex) {
+                 getLogger().log(Level.SEVERE, null, ex);
+             }
++        } else {
++            ChunkProviderServer chunkProviderServer = handle.chunkProviderServer;
++
++            ChunkRegionLoader regionLoader = (ChunkRegionLoader) chunkProviderServer.chunkLoader;
++
++            regionLoader.b.clear();
++            regionLoader.c.clear();
++
++            try {
++                FileIOThread.a().b();
++            } catch (InterruptedException ex) {
++                Thread.currentThread().interrupt();
++            }
++
++            chunkProviderServer.chunkLoader = null;
++            chunkProviderServer.chunkProvider = null;
++            chunkProviderServer.chunks.clear();
+         }
+ 
+         worlds.remove(world.getName().toLowerCase());
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftSound.java b/src/main/java/org/bukkit/craftbukkit/CraftSound.java
+index 0cc8f9ba..025692e4 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftSound.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftSound.java
+@@ -227,5 +227,13 @@ public class CraftSound {
+         return sounds[sound.ordinal()];
+     }
+ 
++    public static Sound getSoundFromKey(final String soundKey){
++        Validate.notNull(soundKey, "soundKey cannot be null");
++        for (int soundi = 0; soundi < sounds.length; soundi++)
++            if (sounds[soundi].equalsIgnoreCase(soundKey))
++                return Sound.values()[soundi];
++        return null;
++    }
++
+     private CraftSound() {}
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftAmbient.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftAmbient.java
+index 086980e7..300a58fc 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftAmbient.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftAmbient.java
+@@ -23,4 +23,5 @@ public class CraftAmbient extends CraftLivingEntity implements Ambient {
+     public EntityType getType() {
+         return EntityType.UNKNOWN;
+     }
++
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftAnimals.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftAnimals.java
+index 4b9b0783..3368076c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftAnimals.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftAnimals.java
+@@ -19,4 +19,5 @@ public class CraftAnimals extends CraftAgeable implements Animals {
+     public String toString() {
+         return "CraftAnimals";
+     }
++
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftBat.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftBat.java
+index 76ada1c3..f4f3258f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftBat.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftBat.java
+@@ -33,4 +33,7 @@ public class CraftBat extends CraftAmbient implements Bat {
+     public void setAwake(boolean state) {
+         getHandle().setAsleep(!state);
+     }
++
++
++
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftBlaze.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftBlaze.java
+index 830d7a84..231be966 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftBlaze.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftBlaze.java
+@@ -24,4 +24,6 @@ public class CraftBlaze extends CraftMonster implements Blaze {
+     public EntityType getType() {
+         return EntityType.BLAZE;
+     }
++
++
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftGolem.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftGolem.java
+index 1fef5e02..71d068e0 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftGolem.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftGolem.java
+@@ -18,4 +18,5 @@ public class CraftGolem extends CraftCreature implements Golem {
+     public String toString() {
+         return "CraftGolem";
+     }
++
+ }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+index 3e3a0480..cb77ef5f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+@@ -33,8 +33,10 @@ import net.minecraft.server.MobEffectList;
+ import org.apache.commons.lang.Validate;
+ import org.bukkit.Location;
+ import org.bukkit.Material;
++import org.bukkit.Sound;
+ import org.bukkit.block.Block;
+ import org.bukkit.craftbukkit.CraftServer;
++import org.bukkit.craftbukkit.CraftSound;
+ import org.bukkit.craftbukkit.CraftWorld;
+ import org.bukkit.craftbukkit.inventory.CraftEntityEquipment;
+ import org.bukkit.craftbukkit.inventory.CraftItemStack;
+@@ -74,12 +76,67 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
+         }
+     }
+ 
++    public boolean canMove(){
++        return getHandle().allowMovement;
++    }
++
++    public boolean canCollide(){
++        return getHandle().allowCollision;
++    }
++
++    public void setCanMove(boolean allowMovement){
++        getHandle().allowMovement = allowMovement;
++    }
++
++    public void setCanCollide(boolean allowCollision){
++        getHandle().allowCollision = allowCollision;
++    }
++
++    public Sound getIdleSound() {
++        return CraftSound.getSoundFromKey(getHandle().getIdleSound());
++    }
++
++    public void setIdleSound(Sound idleSound) {
++        getHandle().setIdleSound(CraftSound.getSound(idleSound));
++    }
++
++    public void setIdleSound(String idleSound) {
++        getHandle().setIdleSound(idleSound);
++    }
++
++    public Sound getHurtSound() {
++        return CraftSound.getSoundFromKey(getHandle().getHurtSound());
++    }
++
++    public void setHurtSound(Sound damageSound) {
++        getHandle().setHurtSound(CraftSound.getSound(damageSound));
++    }
++
++    public void setHurtSound(String damageSound) {
++        getHandle().setHurtSound(damageSound);
++    }
++
++    public Sound getDeathSound() {
++        return CraftSound.getSoundFromKey(getHandle().getDeathSound());
++    }
++
++    public void setDeathSound(Sound deathSound) {
++        getHandle().setDeathSound(CraftSound.getSound(deathSound));
++    }
++
++    public void setDeathSound(String deathSound) {
++        getHandle().setDeathSound(deathSound);
++    }
++
+     public double getHealth() {
+         return Math.min(Math.max(0, getHandle().getHealth()), getMaxHealth());
+     }
+ 
+     public void setHealth(double health) {
+-        if ((health < 0) || (health > getMaxHealth())) {
++        if (health > getMaxHealth())
++            health = getMaxHealth();
++
++        if ((health < 0)) {
+             throw new IllegalArgumentException("Health must be between 0 and " + getMaxHealth() + ", but was " + health
+                 + ". (attribute base value: " + this.getHandle().getAttributeInstance(GenericAttributes.maxHealth).b()
+             + (this instanceof CraftPlayer ? ", player: " + this.getName() + ')' : ')'));
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftMonster.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftMonster.java
+index 72dedbc8..72a1bf8b 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftMonster.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftMonster.java
+@@ -5,7 +5,7 @@ import net.minecraft.server.EntityMonster;
+ import org.bukkit.craftbukkit.CraftServer;
+ import org.bukkit.entity.Monster;
+ 
+-public class CraftMonster extends CraftCreature implements Monster {
++public class CraftMonster extends CraftCreature implements Monster{
+ 
+     public CraftMonster(CraftServer server, EntityMonster entity) {
+         super(server, entity);
+-- 
+2.16.2.windows.1
+
