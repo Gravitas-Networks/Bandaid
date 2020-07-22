@@ -1,0 +1,21 @@
+From 081d3d5096048aa04fbbe6a211286e6260c76fd3 Mon Sep 17 00:00:00 2001
+From: Gatt <zacharygatt@me.com>
+Date: Sat, 27 Jun 2020 17:17:07 +1000
+Subject: [PATCH] Remove duplicate attribute
+
+
+diff --git a/src/main/java/net/minecraft/server/GenericAttributes.java b/src/main/java/net/minecraft/server/GenericAttributes.java
+index 6f738d333..0cc3e2fb6 100644
+--- a/src/main/java/net/minecraft/server/GenericAttributes.java
++++ b/src/main/java/net/minecraft/server/GenericAttributes.java
+@@ -13,7 +13,6 @@ public class GenericAttributes {
+     public static final IAttribute maxHealth = (new AttributeRanged((IAttribute) null, "generic.maxHealth", 20.0D, 0.1D,  org.spigotmc.SpigotConfig.maxHealth)).a("Max Health").a(true);
+     public static final IAttribute FOLLOW_RANGE = (new AttributeRanged((IAttribute) null, "generic.followRange", 32.0D, 0.0D, 2048.0D)).a("Follow Range");
+     public static final IAttribute c = (new AttributeRanged((IAttribute) null, "generic.knockbackResistance", 0.0D, 0.0D, 1.0D)).a("Knockback Resistance");
+-    public static final IAttribute KNOCKBACK_RESISTANCE = c;
+     public static final IAttribute MOVEMENT_SPEED = (new AttributeRanged((IAttribute) null, "generic.movementSpeed", 0.699999988079071D, 0.0D, org.spigotmc.SpigotConfig.movementSpeed)).a("Movement Speed").a(true);
+     public static final IAttribute ATTACK_DAMAGE = new AttributeRanged((IAttribute) null, "generic.attackDamage", 2.0D, 0.0D, org.spigotmc.SpigotConfig.attackDamage);
+     // Spigot end
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,38 @@
+From 8685ed30dfe065905cff4507a8eb038054530a60 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Tue, 7 Jul 2020 18:05:04 +1000
+Subject: [PATCH] Expose getProfile
+
+
+diff --git a/src/main/java/org/bukkit/entity/HumanEntity.java b/src/main/java/org/bukkit/entity/HumanEntity.java
+index 3f8646dd..d6388ff4 100644
+--- a/src/main/java/org/bukkit/entity/HumanEntity.java
++++ b/src/main/java/org/bukkit/entity/HumanEntity.java
+@@ -14,6 +14,7 @@ import org.bukkit.permissions.Permissible;
+  */
+ public interface HumanEntity extends LivingEntity, AnimalTamer, Permissible, InventoryHolder {
+ 
++
+     /**
+      * Returns the name of this player
+      *
+diff --git a/src/main/java/org/bukkit/entity/Player.java b/src/main/java/org/bukkit/entity/Player.java
+index d02fe560..a607013a 100644
+--- a/src/main/java/org/bukkit/entity/Player.java
++++ b/src/main/java/org/bukkit/entity/Player.java
+@@ -28,6 +28,12 @@ import org.github.paperspigot.Title;
+  */
+ public interface Player extends HumanEntity, Conversable, CommandSender, OfflinePlayer, PluginMessageRecipient {
+ 
++    /**
++     *
++     * @return Game Profile Object
++     */
++    public Object getProfile();
++
+     /**
+      * Gets the "friendly" name to display of this player. This may include
+      * color.
+-- 
+2.24.1.windows.2
+

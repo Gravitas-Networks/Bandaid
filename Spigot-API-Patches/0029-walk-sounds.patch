@@ -1,0 +1,34 @@
+From 1121514ed7ad2b7017df108c34351fa7a5ca6a87 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 11 Jul 2020 13:11:45 +1000
+Subject: [PATCH] walk sounds
+
+
+diff --git a/src/main/java/org/bukkit/entity/LivingEntity.java b/src/main/java/org/bukkit/entity/LivingEntity.java
+index fbd202bd..c7b6ebf2 100644
+--- a/src/main/java/org/bukkit/entity/LivingEntity.java
++++ b/src/main/java/org/bukkit/entity/LivingEntity.java
+@@ -28,7 +28,20 @@ public interface LivingEntity extends Entity, Damageable, ProjectileSource {
+     public Sound getIdleSound();
+     public Sound getHurtSound();
+     public Sound getDeathSound();
++    public Sound getWalkSound();
++    /**
++     *
++     * @param walkSound The new Idle Sound
++     */
++    public void setWalkSound(Sound walkSound); /**
++     *
++     * @param walkSound The new Idle Sound
++     */
++    public void setWalkSound(String walkSound);
+ 
++    /**
++     *
++     */
+     /**
+      *
+      * @param idleSound The new Idle Sound
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,319 @@
+From 0c6b943bc8c9b843b03a2ba6aae6590cf2c7bfd6 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Fri, 10 Jul 2020 00:12:03 +1000
+Subject: [PATCH] Localised Names
+
+
+diff --git a/src/main/java/net/minecraft/server/Block.java b/src/main/java/net/minecraft/server/Block.java
+index 85eadcfd3..e4ebbcb68 100644
+--- a/src/main/java/net/minecraft/server/Block.java
++++ b/src/main/java/net/minecraft/server/Block.java
+@@ -1,7 +1,5 @@
+ package net.minecraft.server;
+ 
+-import org.bukkit.event.block.BlockBreakDropItemsEvent;
+-
+ import java.util.Arrays;
+ import java.util.Iterator;
+ import java.util.List;
+diff --git a/src/main/java/net/minecraft/server/PlayerInteractManager.java b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+index 3ef025ccb..61ba1696b 100644
+--- a/src/main/java/net/minecraft/server/PlayerInteractManager.java
++++ b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+@@ -1,14 +1,14 @@
+ package net.minecraft.server;
+ 
+ // CraftBukkit start
++import net.gravitas.bandiadpaper.events.blocks.BlockBreakDropItemsEvent;
++import net.gravitas.bandiadpaper.events.blocks.BlockPreBreakEvent;
+ import org.bukkit.Bukkit;
+ import org.bukkit.craftbukkit.inventory.CraftItemStack;
+-import org.bukkit.event.block.BlockBreakDropItemsEvent;
+ import org.bukkit.event.block.BlockBreakEvent;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.Event;
+ import org.bukkit.event.block.Action;
+-import org.bukkit.event.block.BlockPreBreakEvent;
+ import org.bukkit.event.player.PlayerInteractEvent;
+ 
+ import java.util.ArrayList;
+@@ -264,6 +264,7 @@ public class PlayerInteractManager {
+         if (this.player instanceof EntityPlayer) {
+ 
+             preBreakEvent = new BlockPreBreakEvent(block, this.player.getBukkitEntity());
++
+             // Sword + Creative mode pre-cancel
+             boolean isSwordNoBreak = this.gamemode.d() && this.player.bA() != null && this.player.bA().getItem() instanceof ItemSword;
+ 
+diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftMetaItem.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftMetaItem.java
+index eaaa6a11a..6b03a1440 100644
+--- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftMetaItem.java
++++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftMetaItem.java
+@@ -13,10 +13,8 @@ import java.util.List;
+ import java.util.Map;
+ import java.util.NoSuchElementException;
+ 
+-import net.minecraft.server.NBTBase;
+-import net.minecraft.server.NBTTagCompound;
+-import net.minecraft.server.NBTTagList;
+-import net.minecraft.server.NBTTagString;
++import com.google.gson.JsonParseException;
++import net.minecraft.server.*;
+ 
+ import org.apache.commons.lang.Validate;
+ import org.bukkit.Material;
+@@ -25,6 +23,7 @@ import org.bukkit.configuration.serialization.DelegateDeserialization;
+ import org.bukkit.configuration.serialization.SerializableAs;
+ import org.bukkit.craftbukkit.Overridden;
+ import org.bukkit.craftbukkit.inventory.CraftMetaItem.ItemMetaKey.Specific;
++import org.bukkit.craftbukkit.util.CraftChatMessage;
+ import org.bukkit.enchantments.Enchantment;
+ import org.bukkit.inventory.ItemFlag;
+ import org.bukkit.inventory.meta.ItemMeta;
+@@ -44,13 +43,11 @@ import java.util.Iterator;
+ import java.util.Set;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
+-import net.minecraft.server.NBTCompressedStreamTools;
++
+ import org.apache.commons.codec.binary.Base64;
+ 
+ // Spigot start
+ import static org.spigotmc.ValidateUtils.*;
+-import net.minecraft.server.GenericAttributes;
+-import net.minecraft.server.IAttribute;
+ // Spigot end
+ 
+ /**
+@@ -192,6 +189,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+     }
+ 
+     static final ItemMetaKey NAME = new ItemMetaKey("Name", "display-name");
++    static final ItemMetaKey LOCNAME = new ItemMetaKey("LocName", "loc-name");
+     @Specific(Specific.To.NBT)
+     static final ItemMetaKey DISPLAY = new ItemMetaKey("display");
+     static final ItemMetaKey LORE = new ItemMetaKey("Lore", "lore");
+@@ -236,6 +234,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         }
+ 
+         this.displayName = meta.displayName;
++        this.bandaidPaper.setLocalizedName(meta.bandaidPaper.getLocalizedName());
+ 
+         if (meta.hasLore()) {
+             this.lore = new ArrayList<String>(meta.lore);
+@@ -258,7 +257,13 @@ class CraftMetaItem implements ItemMeta, Repairable {
+             if (display.hasKey(NAME.NBT)) {
+                 displayName = limit( display.getString(NAME.NBT), 1024 ); // Spigot
+             }
+-
++            if (display.hasKey(LOCNAME.NBT)) {
++                try {
++                    this.bandaidPaper.setLocalizedName(display.getString(LOCNAME.NBT )); // Spigot
++                } catch (JsonParseException ex) {
++                    // Ignore (stripped like Vanilla)
++                }
++            }
+             if (display.hasKey(LORE.NBT)) {
+                 NBTTagList list = display.getList(LORE.NBT, 8);
+                 lore = new ArrayList<String>(list.size());
+@@ -455,6 +460,11 @@ class CraftMetaItem implements ItemMeta, Repairable {
+             spigot.setUnbreakable( tag.getBoolean( UNBREAKABLE.NBT ) );
+         }
+         // Spigot end
++
++        // BandaidPaper start
++        if (tag.hasKey(LOCNAME.BUKKIT)){
++            bandaidPaper.setLocalizedName(tag.getString(LOCNAME.BUKKIT));
++        }
+     }
+ 
+     static Map<Enchantment, Integer> buildEnchantments(NBTTagCompound tag, ItemMetaKey key) {
+@@ -509,12 +519,17 @@ class CraftMetaItem implements ItemMeta, Repairable {
+ 
+         // Spigot start
+         Boolean unbreakable = SerializableMeta.getObject( Boolean.class, map, UNBREAKABLE.BUKKIT, true );
+-        if ( unbreakable != null )
+-        {
++        if ( unbreakable != null ) {
+             spigot.setUnbreakable( unbreakable );
+         }
+         // Spigot end
+ 
++        String locName = SerializableMeta.getObject( String.class, map, LOCNAME.BUKKIT, true );
++        if ( locName != null ) {
++            bandaidPaper.setLocalizedName( locName );
++        }
++        // Spigot end
++
+         String internal = SerializableMeta.getString(map, "internal", true);
+         if (internal != null) {
+             ByteArrayInputStream buf = new ByteArrayInputStream(Base64.decodeBase64(internal));
+@@ -559,6 +574,9 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         if (hasDisplayName()) {
+             setDisplayTag(itemTag, NAME.NBT, new NBTTagString(displayName));
+         }
++        if (hasLocalizedName()){
++            setDisplayTag(itemTag, LOCNAME.NBT, new NBTTagString(this.bandaidPaper.getLocalizedName()));
++        }
+ 
+         if (hasLore()) {
+             setDisplayTag(itemTag, LORE.NBT, createStringList(lore));
+@@ -568,14 +586,18 @@ class CraftMetaItem implements ItemMeta, Repairable {
+             itemTag.setInt(HIDEFLAGS.NBT, hideFlag);
+         }
+ 
++
+         applyEnchantments(enchantments, itemTag, ENCHANTMENTS);
+- 
++
+         // Spigot start
+         if ( spigot.isUnbreakable() )
+         {
+             itemTag.setBoolean( UNBREAKABLE.NBT, true );
+         }
+         // Spigot end
++        if (bandaidPaper.hasLocalizedName()){
++            itemTag.setString(LOCNAME.BUKKIT, bandaidPaper.getLocalizedName());
++        }
+ 
+ 
+         if (hasRepairCost()) {
+@@ -636,7 +658,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+ 
+     @Overridden
+     boolean isEmpty() {
+-        return !(hasDisplayName() || hasEnchants() || hasLore() || hasRepairCost() || !unhandledTags.isEmpty() || hideFlag != 0 || spigot.isUnbreakable()); // Spigot
++        return !(hasDisplayName() || hasEnchants() || hasLore() || hasRepairCost() || !unhandledTags.isEmpty() || hideFlag != 0 || spigot.isUnbreakable() || bandaidPaper.hasLocalizedName()); // Spigot
+     }
+ 
+     public String getDisplayName() {
+@@ -724,11 +746,11 @@ class CraftMetaItem implements ItemMeta, Repairable {
+     public Set<ItemFlag> getItemFlags() {
+         Set<ItemFlag> currentFlags = EnumSet.noneOf(ItemFlag.class);
+ 
+-        for (ItemFlag f : ItemFlag.values()) {
+-            if (hasItemFlag(f)) {
++        for (ItemFlag f : ItemFlag.values())
++            if (hasItemFlag(f))
+                 currentFlags.add(f);
+-            }
+-        }
++
++
+ 
+         return currentFlags;
+     }
+@@ -795,7 +817,8 @@ class CraftMetaItem implements ItemMeta, Repairable {
+                 && (this.hasRepairCost() ? that.hasRepairCost() && this.repairCost == that.repairCost : !that.hasRepairCost())
+                 && (this.unhandledTags.equals(that.unhandledTags))
+                 && (this.hideFlag == that.hideFlag)
+-                && (this.spigot.isUnbreakable() == that.spigot.isUnbreakable()); // Spigot
++                && (this.spigot.isUnbreakable() == that.spigot.isUnbreakable())
++                && (this.bandaidPaper.hasLocalizedName() == that.bandaidPaper.hasLocalizedName() && (this.bandaidPaper.hasLocalizedName() && this.bandaidPaper.getLocalizedName().equalsIgnoreCase(that.bandaidPaper.getLocalizedName()))); // Spigot
+     }
+ 
+     /**
+@@ -823,6 +846,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         hash = 61 * hash + unhandledTags.hashCode();
+         hash = 61 * hash + hideFlag;
+         hash = 61 * hash + (spigot.isUnbreakable() ? 1231 : 1237); // Spigot
++        hash = 61 * hash + (bandaidPaper.hasLocalizedName() ? bandaidPaper.getLocalizedName().hashCode() : 0); // bandaidpaper
+         return hash;
+     }
+ 
+@@ -844,6 +868,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         }
+     }
+ 
++
+     public final Map<String, Object> serialize() {
+         ImmutableMap.Builder<String, Object> map = ImmutableMap.builder();
+         map.put(SerializableMeta.TYPE_FIELD, SerializableMeta.classMap.get(getClass()));
+@@ -856,6 +881,9 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         if (hasDisplayName()) {
+             builder.put(NAME.BUKKIT, displayName);
+         }
++        if (hasLocalizedName()) {
++            builder.put(LOCNAME.BUKKIT, this.bandaidPaper.getLocalizedName());
++        }
+ 
+         if (hasLore()) {
+             builder.put(LORE.BUKKIT, ImmutableList.copyOf(lore));
+@@ -866,7 +894,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         if (hasRepairCost()) {
+             builder.put(REPAIR.BUKKIT, repairCost);
+         }
+- 
++
+         // Spigot start
+         if ( spigot.isUnbreakable() )
+         {
+@@ -874,6 +902,11 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         }
+         // Spigot end
+ 
++        // bandaidpaper
++        if (bandaidPaper.hasLocalizedName()){
++            builder.put(LOCNAME.BUKKIT, bandaidPaper.getLocalizedName());
++        }
++
+ 
+         Set<String> hideFlags = new HashSet<String>();
+         for (ItemFlag hideFlagEnum : getItemFlags()) {
+@@ -990,6 +1023,45 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         }
+     }
+ 
++    @Override
++    public boolean hasLocalizedName() {
++        return bandaidPaper.hasLocalizedName();
++    }
++
++    @Override
++    public String getLocalizedName() {
++        return bandaidPaper.getLocalizedName();
++    }
++
++    @Override
++    public void setLocalizedName(String name) {
++        bandaidPaper.setLocalizedName(name);
++    }
++
++    private final BandaidPaper bandaidPaper = new BandaidPaper(){
++        private String localisedName = "";
++
++        @Override
++        public boolean hasLocalizedName() {
++            return !localisedName.equalsIgnoreCase("");
++        }
++
++        @Override
++        public String getLocalizedName() {
++            return localisedName;
++        }
++
++        @Override
++        public void setLocalizedName(String name) {
++            this.localisedName = name;
++        }
++    };
++
++    @Override
++    public BandaidPaper bandaid() {
++        return bandaidPaper;
++    }
++
+     // Spigot start
+     private final Spigot spigot = new Spigot()
+     {
+@@ -1008,6 +1080,7 @@ class CraftMetaItem implements ItemMeta, Repairable {
+         }
+     };
+ 
++
+     @Override
+     public Spigot spigot()
+     {
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,65 @@
+From 5329ed1980efba02271269289b885fed33a01c89 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 11 Jul 2020 13:11:49 +1000
+Subject: [PATCH] walk sounds
+
+
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index b0a8e4155..075b9fcac 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -7,10 +7,7 @@ import java.util.UUID;
+ import java.util.concurrent.Callable;
+ 
+ // CraftBukkit start
+-import org.bukkit.Bukkit;
+-import org.bukkit.Location;
+-import org.bukkit.Server;
+-import org.bukkit.TravelAgent;
++import org.bukkit.*;
+ import org.bukkit.block.BlockFace;
+ import org.bukkit.entity.*;
+ import co.aikar.timings.SpigotTimings; // Spigot
+@@ -141,6 +138,7 @@ public abstract class Entity implements ICommandListener {
+ 
+     // BandaidPaper Start
+     public boolean allowMovement = true, allowCollision = true;
++    public String walkSound = null;
+     // BandaidPaper End
+ 
+     public int getId() {
+@@ -722,7 +720,8 @@ public abstract class Entity implements ICommandListener {
+                         this.makeSound(this.P(), f, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.4F);
+                     }
+ 
+-                    this.a(blockposition, block);
++                    if (walkSound == null) this.a(blockposition, block); // play walk sound
++                    else if (!walkSound.equalsIgnoreCase("mute")) this.makeSound(walkSound,0.15F, 1.0F);
+                     block.a(this.world, blockposition, this); // CraftBukkit moved from above
+                 }
+             }
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+index 968744032..554ee143d 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftLivingEntity.java
+@@ -93,6 +93,17 @@ public class CraftLivingEntity extends CraftEntity implements LivingEntity {
+         getHandle().k = allowCollision;
+     }
+ 
++    public Sound getWalkSound() {
++        if (!getHandle().walkSound.equalsIgnoreCase("mute")) return CraftSound.getSoundFromKey(getHandle().walkSound);
++        else return null;
++    }
++
++    public void setWalkSound(Sound walkSound) { getHandle().walkSound = CraftSound.getSound(walkSound); }
++
++    public void setWalkSound(String walkSound) {
++        getHandle().walkSound = walkSound;
++    }
++
+     public Sound getIdleSound() {
+         return CraftSound.getSoundFromKey(getHandle().getIdleSound());
+     }
+-- 
+2.24.1.windows.2
+

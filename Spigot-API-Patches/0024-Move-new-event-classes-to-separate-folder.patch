@@ -1,0 +1,56 @@
+From f7a5546ed6fb338b7e84cc154f9fc7ec7ed66a83 Mon Sep 17 00:00:00 2001
+From: Gatt <zacharygatt@me.com>
+Date: Sat, 27 Jun 2020 17:40:53 +1000
+Subject: [PATCH] Move new event classes to separate folder
+
+
+diff --git a/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
+similarity index 92%
+rename from src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
+rename to src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
+index 87f4b0a2..40226ada 100644
+--- a/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
++++ b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
+@@ -1,9 +1,10 @@
+-package org.bukkit.event.block;
++package net.gravitas.bandiadpaper.events.blocks;
+ 
+ import org.bukkit.block.Block;
+ import org.bukkit.entity.Player;
+ import org.bukkit.event.Cancellable;
+ import org.bukkit.event.HandlerList;
++import org.bukkit.event.block.BlockEvent;
+ import org.bukkit.inventory.ItemStack;
+ 
+ import java.util.List;
+@@ -19,7 +20,7 @@ public class BlockBreakDropItemsEvent extends BlockEvent implements Cancellable
+     private final Player player;
+     private boolean cancel;
+     private List<ItemStack> drops;
+-    private boolean isSilkTouch;
++    private final boolean isSilkTouch;
+ 
+     public BlockBreakDropItemsEvent(Block theBlock, Player player, List<ItemStack> drops, boolean isSilkTouch) {
+         super(theBlock);
+diff --git a/src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockPreBreakEvent.java
+similarity index 92%
+rename from src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java
+rename to src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockPreBreakEvent.java
+index aaf64959..f9d602b1 100644
+--- a/src/main/java/org/bukkit/event/block/BlockPreBreakEvent.java
++++ b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockPreBreakEvent.java
+@@ -1,9 +1,10 @@
+-package org.bukkit.event.block;
++package net.gravitas.bandiadpaper.events.blocks;
+ 
+ import org.bukkit.block.Block;
+ import org.bukkit.entity.Player;
+ import org.bukkit.event.Cancellable;
+ import org.bukkit.event.HandlerList;
++import org.bukkit.event.block.BlockEvent;
+ 
+ /**
+  * Called before a Block Destroy Packet is sent to clients. Cancel this event to cancel the packet from being sent.
+-- 
+2.24.1.windows.2
+
