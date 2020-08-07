@@ -1,0 +1,22 @@
+From 027b3b5e491bec6dbf173da94a43889855984a21 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 01:52:08 +1000
+Subject: [PATCH] return actual period < 0
+
+
+diff --git a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
+index 7943e8998..21739e304 100644
+--- a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
++++ b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
+@@ -62,7 +62,7 @@ public class CraftTask implements BukkitTask, Runnable { // Spigot
+     }
+ 
+     long getPeriod() {
+-        return period * MinecraftServer.getMultiplier();
++        return period > 0 ? period * MinecraftServer.getMultiplier() : period;
+     }
+ 
+     void setPeriod(long period) {
+-- 
+2.24.1.windows.2
+

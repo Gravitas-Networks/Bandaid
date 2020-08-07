@@ -1,0 +1,283 @@
+From 42f2c58d6021e46335051a2e272f50877a687eaf Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 01:13:15 +1000
+Subject: [PATCH] Experimental TPS mode
+
+tps min 40
+
+tps fixing
+
+bring it down
+
+Experimental TPS Mode
+
+Fix )
+
+diff --git a/src/main/java/net/minecraft/server/Container.java b/src/main/java/net/minecraft/server/Container.java
+index 7fc495792..9aea3bf78 100644
+--- a/src/main/java/net/minecraft/server/Container.java
++++ b/src/main/java/net/minecraft/server/Container.java
+@@ -76,7 +76,7 @@ public abstract class Container {
+             ItemStack itemstack = ((Slot) this.c.get(i)).getItem();
+             ItemStack itemstack1 = (ItemStack) this.b.get(i);
+ 
+-            if (!ItemStack.fastMatches(itemstack1, itemstack) || (tickCount % 20 == 0 && !ItemStack.matches(itemstack1, itemstack))) { // Spigot
++            if (!ItemStack.fastMatches(itemstack1, itemstack) || (tickCount % MinecraftServer.getExpectedTPS() == 0 && !ItemStack.matches(itemstack1, itemstack))) { // Spigot
+                 itemstack1 = itemstack == null ? null : itemstack.cloneItemStack();
+                 this.b.set(i, itemstack1);
+ 
+diff --git a/src/main/java/net/minecraft/server/Entity.java b/src/main/java/net/minecraft/server/Entity.java
+index 075b9fcac..29b64544e 100644
+--- a/src/main/java/net/minecraft/server/Entity.java
++++ b/src/main/java/net/minecraft/server/Entity.java
+@@ -333,7 +333,7 @@ public abstract class Entity implements ICommandListener {
+                     this.fireTicks = 0;
+                 }
+             } else {
+-                if (this.fireTicks % 20 == 0) {
++                if (this.fireTicks % MinecraftServer.getExpectedTPS() == 0) {
+                     this.damageEntity(DamageSource.BURN, 1.0F);
+                 }
+ 
+diff --git a/src/main/java/net/minecraft/server/EntityArrow.java b/src/main/java/net/minecraft/server/EntityArrow.java
+index eac0363c2..0a3f84762 100644
+--- a/src/main/java/net/minecraft/server/EntityArrow.java
++++ b/src/main/java/net/minecraft/server/EntityArrow.java
+@@ -105,6 +105,10 @@ public class EntityArrow extends Entity implements IProjectile {
+     public void shoot(double d0, double d1, double d2, float f, float f1) {
+         float f2 = MathHelper.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
+ 
++        d0 /= (double) MinecraftServer.getMultiplier();
++        d1 /= (double) MinecraftServer.getMultiplier();
++        d2 /= (double) MinecraftServer.getMultiplier();
++
+         d0 /= (double) f2;
+         d1 /= (double) f2;
+         d2 /= (double) f2;
+diff --git a/src/main/java/net/minecraft/server/EntityCreeper.java b/src/main/java/net/minecraft/server/EntityCreeper.java
+index fecf94da1..5b07345a0 100644
+--- a/src/main/java/net/minecraft/server/EntityCreeper.java
++++ b/src/main/java/net/minecraft/server/EntityCreeper.java
+@@ -9,7 +9,7 @@ public class EntityCreeper extends EntityMonster {
+ 
+     private int a;
+     private int fuseTicks;
+-    private int maxFuseTicks = 30;
++    private int maxFuseTicks = 30 * MinecraftServer.getExpectedTPS();
+     private int explosionRadius = 3;
+     private int bn = 0;
+     private int record = -1; // CraftBukkit
+diff --git a/src/main/java/net/minecraft/server/EntityLiving.java b/src/main/java/net/minecraft/server/EntityLiving.java
+index 229c371c5..ae8ca88b9 100644
+--- a/src/main/java/net/minecraft/server/EntityLiving.java
++++ b/src/main/java/net/minecraft/server/EntityLiving.java
+@@ -51,7 +51,7 @@ public abstract class EntityLiving extends Entity {
+     public float aA;
+     public float aB;
+     public float aC;
+-    public int maxNoDamageTicks = 20;
++    public int maxNoDamageTicks = MinecraftServer.getExpectedTPS();
+     public float aE;
+     public float aF;
+     public float aG;
+@@ -92,7 +92,7 @@ public abstract class EntityLiving extends Entity {
+     private float bo;
+     // CraftBukkit start
+     public int expToDrop;
+-    public int maxAirTicks = 300;
++    public int maxAirTicks = 300 * MinecraftServer.getExpectedTPS();
+     ArrayList<org.bukkit.inventory.ItemStack> drops = null;
+     // CraftBukkit end
+     // Spigot start
+@@ -237,7 +237,7 @@ public abstract class EntityLiving extends Entity {
+             if (this.a(Material.WATER)) {
+                 if (!this.aY() && !this.hasEffect(MobEffectList.WATER_BREATHING.id) && !flag1) {
+                     this.setAirTicks(this.j(this.getAirTicks()));
+-                    if (this.getAirTicks() == -20) {
++                    if (this.getAirTicks() ==  MinecraftServer.getExpectedTPS()/-1) {
+                         this.setAirTicks(0);
+ 
+                         for (int i = 0; i < 8; ++i) {
+@@ -326,7 +326,7 @@ public abstract class EntityLiving extends Entity {
+ 
+     protected void aZ() {
+         ++this.deathTicks;
+-        if (this.deathTicks >= 20 && !this.dead) { // CraftBukkit - (this.deathTicks == 20) -> (this.deathTicks >= 20 && !this.dead)
++        if (this.deathTicks >= MinecraftServer.getExpectedTPS() && !this.dead) { // CraftBukkit - (this.deathTicks == 20) -> (this.deathTicks >= 20 && !this.dead)
+             int i;
+ 
+             // CraftBukkit start - Update getExpReward() above if the removed if() changes!
+@@ -1527,7 +1527,7 @@ public abstract class EntityLiving extends Entity {
+                 }
+             }
+ 
+-            if (this.ticksLived % 20 == 0) {
++            if (this.ticksLived % MinecraftServer.getExpectedTPS() == 0) {
+                 this.bs().g();
+             }
+         }
+diff --git a/src/main/java/net/minecraft/server/EntityProjectile.java b/src/main/java/net/minecraft/server/EntityProjectile.java
+index e7cca3c6c..6477e2f02 100644
+--- a/src/main/java/net/minecraft/server/EntityProjectile.java
++++ b/src/main/java/net/minecraft/server/EntityProjectile.java
+@@ -59,6 +59,10 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
+     public void shoot(double d0, double d1, double d2, float f, float f1) {
+         float f2 = MathHelper.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
+ 
++        d0 /= (double) MinecraftServer.getMultiplier();
++        d1 /= (double) MinecraftServer.getMultiplier();
++        d2 /= (double) MinecraftServer.getMultiplier();
++
+         d0 /= (double) f2;
+         d1 /= (double) f2;
+         d2 /= (double) f2;
+diff --git a/src/main/java/net/minecraft/server/EntityWither.java b/src/main/java/net/minecraft/server/EntityWither.java
+index fb19bad3c..44f9e121c 100644
+--- a/src/main/java/net/minecraft/server/EntityWither.java
++++ b/src/main/java/net/minecraft/server/EntityWither.java
+@@ -313,7 +313,7 @@ public class EntityWither extends EntityMonster implements IRangedEntity {
+                 }
+             }
+ 
+-            if (this.ticksLived % 20 == 0) {
++            if (this.ticksLived % MinecraftServer.getExpectedTPS() == 0) {
+                 this.heal(1.0F, EntityRegainHealthEvent.RegainReason.REGEN); // CraftBukkit
+             }
+ 
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index b400ce04d..07718760b 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -328,14 +328,9 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+     }
+ 
+     protected void k() {
+-        boolean flag = true;
+-        boolean flag1 = true;
+-        boolean flag2 = true;
+-        boolean flag3 = true;
+         int i = 0;
+ 
+         this.b("menu.generatingTerrain");
+-        byte b0 = 0;
+ 
+         // CraftBukkit start - fire WorldLoadEvent and handle whether or not to keep the spawn in memory
+         for (int m = 0; m < worlds.size(); m++) {
+@@ -510,11 +505,24 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+     }
+ 
+     // PaperSpigot start - Further improve tick loop
+-    private static final int TPS = 20;
++    private static final int TPS = 40;
+     private static final long SEC_IN_NANO = 1000000000;
+     private static final long TICK_TIME = SEC_IN_NANO / TPS;
+     private static final long MAX_CATCHUP_BUFFER = TICK_TIME * TPS * 60L;
+-    private static final int SAMPLE_INTERVAL = 20;
++    private static final int SAMPLE_INTERVAL = TPS;
++
++    public static long getMultiplier(){
++        return (long)getExpectedTPS() / (long)getDefaultTPS();
++    }
++
++    public static int getDefaultTPS() {
++        return 20;
++    }
++
++    public static int getExpectedTPS() {
++        return TPS;
++    }
++
+     public final RollingAverage tps1 = new RollingAverage(60);
+     public final RollingAverage tps5 = new RollingAverage(60 * 5);
+     public final RollingAverage tps15 = new RollingAverage(60 * 15);
+@@ -796,7 +804,7 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+ 
+         SpigotTimings.timeUpdateTimer.startTiming(); // Spigot
+         // Send time updates to everyone, it will get the right time from the world the player is in.
+-        if (this.ticks % 20 == 0) {
++        if (this.ticks % MinecraftServer.getExpectedTPS() == 0) {
+             for (int i = 0; i < this.getPlayerList().players.size(); ++i) {
+                 EntityPlayer entityplayer = (EntityPlayer) this.getPlayerList().players.get(i);
+                 entityplayer.playerConnection.sendPacket(new PacketPlayOutUpdateTime(entityplayer.world.getTime(), entityplayer.getPlayerTime(), entityplayer.world.getGameRules().getBoolean("doDaylightCycle"))); // Add support for per player time
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
+index 4f9179908..1fa64b1e7 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
+@@ -215,9 +215,9 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
+         }
+         // Paper end
+ 
+-        entity.motX = vel.getX();
+-        entity.motY = vel.getY();
+-        entity.motZ = vel.getZ();
++        entity.motX = vel.getX() / MinecraftServer.getMultiplier();
++        entity.motY = vel.getY() / MinecraftServer.getMultiplier();
++        entity.motZ = vel.getZ() / MinecraftServer.getMultiplier();
+         entity.velocityChanged = true;
+     }
+ 
+diff --git a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
+index f036709c4..ac322824c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
++++ b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftScheduler.java
+@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
+ import java.util.concurrent.atomic.AtomicReference;
+ import java.util.logging.Level;
+ 
++import net.minecraft.server.MinecraftServer;
+ import org.apache.commons.lang.Validate;
+ import org.bukkit.plugin.IllegalPluginAccessException;
+ import org.bukkit.plugin.Plugin;
+@@ -394,7 +395,9 @@ public class CraftScheduler implements BukkitScheduler {
+         tailTask.setNext(task);
+     }
+ 
+-    private CraftTask handle(final CraftTask task, final long delay) {
++    private CraftTask handle(final CraftTask task, long delay) {
++        if (delay > 0) delay = delay * (MinecraftServer.getMultiplier());
++        task.setPeriod(task.getPeriod() * (MinecraftServer.getMultiplier()));
+         task.setNextRun(currentTick + delay);
+         addTask(task);
+         return task;
+diff --git a/src/main/java/org/spigotmc/ActivationRange.java b/src/main/java/org/spigotmc/ActivationRange.java
+index d3767d2a8..f10f69954 100644
+--- a/src/main/java/org/spigotmc/ActivationRange.java
++++ b/src/main/java/org/spigotmc/ActivationRange.java
+@@ -262,13 +262,13 @@ public class ActivationRange
+         // Should this entity tick?
+         if ( !isActive )
+         {
+-            if ( ( MinecraftServer.currentTick - entity.activatedTick - 1 ) % 20 == 0 )
++            if ( ( MinecraftServer.currentTick - entity.activatedTick - 1 ) % MinecraftServer.getExpectedTPS() == 0 )
+             {
+                 // Check immunities every 20 ticks.
+                 if ( checkEntityImmunities( entity ) )
+                 {
+                     // Triggered some sort of immunity, give 20 full ticks before we check again.
+-                    entity.activatedTick = MinecraftServer.currentTick + 20;
++                    entity.activatedTick = MinecraftServer.currentTick + MinecraftServer.getExpectedTPS();
+                 }
+                 isActive = true;
+             }
+diff --git a/src/main/java/org/spigotmc/TicksPerSecondCommand.java b/src/main/java/org/spigotmc/TicksPerSecondCommand.java
+index 21fd7efc5..46deb5be2 100644
+--- a/src/main/java/org/spigotmc/TicksPerSecondCommand.java
++++ b/src/main/java/org/spigotmc/TicksPerSecondCommand.java
+@@ -1,5 +1,6 @@
+ package org.spigotmc;
+ 
++import net.minecraft.server.MinecraftServer;
+ import org.bukkit.ChatColor;
+ import org.bukkit.command.Command;
+ import org.bukkit.command.CommandSender;
+@@ -38,6 +39,6 @@ public class TicksPerSecondCommand extends Command
+     private static String format(double tps) // PaperSpigot - made static
+     {
+         return ( ( tps > 18.0 ) ? ChatColor.GREEN : ( tps > 16.0 ) ? ChatColor.YELLOW : ChatColor.RED ).toString()
+-                + ( ( tps > 20.0 ) ? "*" : "" ) + Math.min( Math.round( tps * 100.0 ) / 100.0, 20.0 );
++                + ( ( tps > MinecraftServer.getExpectedTPS() ) ? "*" : "" ) + Math.min( Math.round( tps * 100.0 ) / 100.0, MinecraftServer.getExpectedTPS() );
+     }
+ }
+-- 
+2.24.1.windows.2
+

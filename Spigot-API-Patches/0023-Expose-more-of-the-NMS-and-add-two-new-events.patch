@@ -1,4 +1,4 @@
-From 26062487e5766ae0a35c53355ceab0040b224113 Mon Sep 17 00:00:00 2001
+From cdd7c6af5a715c46b0c7a2411658d635d86aa41e Mon Sep 17 00:00:00 2001
 From: Gatt <zacharygatt@me.com>
 Date: Sat, 27 Jun 2020 16:53:10 +1000
 Subject: [PATCH] Expose more of the NMS and add two new events
@@ -39,7 +39,7 @@ index 48e25089..4fddece8 100644
       *
 diff --git a/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java b/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
 new file mode 100644
-index 00000000..f22753e0
+index 00000000..87f4b0a2
 --- /dev/null
 +++ b/src/main/java/org/bukkit/event/block/BlockBreakDropItemsEvent.java
 @@ -0,0 +1,69 @@
@@ -220,5 +220,5 @@ index 7e89b97b..f393c5c4 100644
  
  }
 -- 
-2.16.2.windows.1
+2.24.1.windows.2
 

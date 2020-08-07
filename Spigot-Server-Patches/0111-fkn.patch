@@ -1,0 +1,27 @@
+From fb85dbbfb6ca1ab00fe4abc901ac16b14a8a10fd Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Wed, 22 Jul 2020 22:55:59 +1000
+Subject: [PATCH] fkn
+
+
+diff --git a/src/main/java/net/minecraft/server/PlayerConnection.java b/src/main/java/net/minecraft/server/PlayerConnection.java
+index 7b4498001..9f6d9ff88 100644
+--- a/src/main/java/net/minecraft/server/PlayerConnection.java
++++ b/src/main/java/net/minecraft/server/PlayerConnection.java
+@@ -269,8 +269,11 @@ public class PlayerConnection implements PacketListenerPlayIn, IUpdatePlayerList
+                     this.lastYaw = to.getYaw();
+                     this.lastPitch = to.getPitch();
+ 
+-                    if (to.distance(from) > 0 && !getPlayer().canMove()){//hard stop.
+-                        this.player.playerConnection.sendPacket(new PacketPlayOutPosition(from.getX(), from.getY(), from.getZ(), to.getYaw(), to.getPitch(), Collections.<PacketPlayOutPosition.EnumPlayerTeleportFlags>emptySet()));
++                    if (to.distance(from) > 0.01 && !getPlayer().canMove()){//hard stop.
++                        //this.player.playerConnection.sendPacket(new PacketPlayOutPosition(from.getX(), from.getY(), from.getZ(), to.getYaw(), to.getPitch(), Collections.<PacketPlayOutPosition.EnumPlayerTeleportFlags>emptySet()));
++                        from.setPitch(to.getPitch());
++                        from.setYaw(to.getYaw());
++                        player.teleport(from);
+                         return;
+                     }
+ 
+-- 
+2.24.1.windows.2
+
