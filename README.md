@@ -4,6 +4,8 @@ Bandaid
 A PaperSpigot Fork specifically for 1.8.8 designed to expose more of the NMS and optimise.
 
 
+**The current uploaded version runs at an experimental 40TPS**
+
 
 How To (Server Admins)
 ------
