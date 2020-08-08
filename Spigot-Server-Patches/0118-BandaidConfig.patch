@@ -1,0 +1,341 @@
+From 3fbf6e1000adf8bd6e4dd2092648835cc9687255 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 13:01:50 +1000
+Subject: [PATCH] BandaidConfig
+
+
+diff --git a/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java b/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java
+new file mode 100644
+index 000000000..9e2bfe990
+--- /dev/null
++++ b/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java
+@@ -0,0 +1,145 @@
++package net.gravitas.bandaidpaper.config;
++
++import com.google.common.base.Throwables;
++import net.minecraft.server.Items;
++import net.minecraft.server.MinecraftServer;
++import org.apache.commons.lang.StringUtils;
++import org.bukkit.Bukkit;
++import org.bukkit.Material;
++import org.bukkit.command.Command;
++import org.bukkit.configuration.InvalidConfigurationException;
++import org.bukkit.configuration.file.YamlConfiguration;
++
++import java.io.File;
++import java.io.IOException;
++import java.lang.reflect.Field;
++import java.lang.reflect.InvocationTargetException;
++import java.lang.reflect.Method;
++import java.lang.reflect.Modifier;
++import java.util.*;
++import java.util.logging.Level;
++
++public class BandaidConfig
++{
++
++    private static File CONFIG_FILE;
++    private static final String HEADER = "This is the main configuration file for BandaidPaper.";
++
++    /*========================================================================*/
++    public static YamlConfiguration config;
++    static int version;
++    static Map<String, Command> commands;
++    /*========================================================================*/
++
++
++    public static void registerCommands()
++    {
++        for ( Map.Entry<String, Command> entry : commands.entrySet() )
++        {
++            MinecraftServer.getServer().server.getCommandMap().register( entry.getKey(), "Bandaid", entry.getValue() );
++        }
++    }
++
++    public static void init(File configFile)
++    {
++        CONFIG_FILE = configFile;
++        config = new YamlConfiguration();
++        try
++        {
++            config.load ( CONFIG_FILE );
++        } catch ( IOException ex )
++        {
++        } catch ( InvalidConfigurationException ex )
++        {
++            Bukkit.getLogger().log( Level.SEVERE, "Could not load bandaid.yml, please correct your syntax errors", ex );
++            throw Throwables.propagate( ex );
++        }
++        config.options().header( HEADER );
++        config.options().copyDefaults( true );
++
++        commands = new HashMap<String, Command>();
++
++        version = getInt( "config-version", 1 );
++        set( "config-version", 1 );
++        readConfig( BandaidConfig.class, null );
++    }
++
++    static void readConfig(Class<?> clazz, Object instance)
++    {
++        for ( Method method : clazz.getDeclaredMethods() )
++        {
++            if ( Modifier.isPrivate( method.getModifiers() ) )
++            {
++                if ( method.getParameterTypes().length == 0 && method.getReturnType() == Void.TYPE )
++                {
++                    try
++                    {
++                        method.setAccessible( true );
++                        method.invoke( instance );
++                    } catch ( InvocationTargetException ex )
++                    {
++                        throw Throwables.propagate( ex.getCause() );
++                    } catch ( Exception ex )
++                    {
++                        Bukkit.getLogger().log( Level.SEVERE, "Error invoking " + method, ex );
++                    }
++                }
++            }
++        }
++
++        try
++        {
++            config.save( CONFIG_FILE );
++        } catch ( IOException ex )
++        {
++            Bukkit.getLogger().log( Level.SEVERE, "Could not save " + CONFIG_FILE, ex );
++        }
++    }
++
++    private static void set(String path, Object val)
++    {
++        config.set( path, val );
++    }
++
++    private static boolean getBoolean(String path, boolean def)
++    {
++        config.addDefault( path, def );
++        return config.getBoolean( path, config.getBoolean( path ) );
++    }
++
++    private static double getDouble(String path, double def)
++    {
++        config.addDefault( path, def );
++        return config.getDouble( path, config.getDouble( path ) );
++    }
++
++    private static float getFloat(String path, float def)
++    {
++        // TODO: Figure out why getFloat() always returns the default value.
++        return (float) getDouble( path, (double) def );
++    }
++
++    private static int getInt(String path, int def)
++    {
++        config.addDefault( path, def );
++        return config.getInt( path, config.getInt( path ) );
++    }
++
++    private static <T> List getList(String path, T def)
++    {
++        config.addDefault( path, def );
++        return (List<T>) config.getList( path, config.getList( path ) );
++    }
++
++    private static String getString(String path, String def)
++    {
++        config.addDefault( path, def );
++        return config.getString( path, config.getString( path ) );
++    }
++
++    public static int targetTPS;
++    private static void targetTPS()
++    {
++        targetTPS = getInt( "settings.targetTPS", 20 );
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/DedicatedServer.java b/src/main/java/net/minecraft/server/DedicatedServer.java
+index 088beb22b..51aae49fc 100644
+--- a/src/main/java/net/minecraft/server/DedicatedServer.java
++++ b/src/main/java/net/minecraft/server/DedicatedServer.java
+@@ -182,6 +182,11 @@ public class DedicatedServer extends MinecraftServer implements IMinecraftServer
+             org.github.paperspigot.PaperSpigotConfig.registerCommands();
+             // PaperSpigot end
+ 
++            // PaperSpigot start
++            net.gravitas.bandaidpaper.config.BandaidConfig.init((File) options.valueOf("bandaid-settings"));
++            net.gravitas.bandaidpaper.config.BandaidConfig.registerCommands();
++            // PaperSpigot end
++
+             DedicatedServer.LOGGER.info("Generating keypair");
+             this.a(MinecraftEncryption.b());
+             DedicatedServer.LOGGER.info("Starting Minecraft server on " + (this.getServerIp().length() == 0 ? "*" : this.getServerIp()) + ":" + this.R());
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 020b4af38..661468c5c 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -841,6 +841,20 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+                 }
+             }
+ 
++            try {
++                worldserver.tickPlayers();
++            } catch (Throwable throwable1) {
++                // Spigot
++                try {
++                    crashreport = CrashReport.a(throwable1, "Exception ticking world players");
++                } catch (Throwable t) {
++                    throw new RuntimeException("Error generating crash report", t);
++                }
++                // Spigot End
++                worldserver.a(crashreport);
++                throw new ReportedException(crashreport);
++            }
++
+             if (this.ticks % MinecraftServer.getMultiplier() == 0) { // only tick entities every multiplier tick
+                 try {
+                     worldserver.timings.tickEntities.startTiming(); // Spigot
+diff --git a/src/main/java/net/minecraft/server/PlayerList.java b/src/main/java/net/minecraft/server/PlayerList.java
+index 3c2d3197f..446c1a2aa 100644
+--- a/src/main/java/net/minecraft/server/PlayerList.java
++++ b/src/main/java/net/minecraft/server/PlayerList.java
+@@ -1139,6 +1139,10 @@ public abstract class PlayerList {
+         return this.maxPlayers;
+     }
+ 
++    public void setMaxPlayers(int maxPlayers) {
++        this.maxPlayers = maxPlayers;
++    }
++
+     public String[] getSeenPlayers() {
+         return this.server.worlds.get(0).getDataManager().getPlayerFileData().getSeenPlayers(); // CraftBukkit
+     }
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index f3a7768b4..45f95f956 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -1371,7 +1371,7 @@ public abstract class World implements IBlockAccess {
+         for (i = 0; i < this.k.size(); ++i) {
+             entity = (Entity) this.k.get(i);
+             // CraftBukkit start - Fixed an NPE
+-            if (entity == null) {
++            if (entity == null || entity instanceof EntityPlayer) { // don't tick players here
+                 continue;
+             }
+             // CraftBukkit end
+@@ -1583,6 +1583,46 @@ public abstract class World implements IBlockAccess {
+         this.methodProfiler.b();
+     }
+ 
++    public synchronized void tickPlayers() {
++        this.methodProfiler.a("entities");
++        this.methodProfiler.a("global");
++
++        int i;
++        Entity entity;
++        CrashReport crashreport;
++        CrashReportSystemDetails crashreportsystemdetails;
++
++        for (i = 0; i < this.k.size(); ++i) {
++            entity = (Entity) this.k.get(i);
++            // CraftBukkit start - Fixed an NPE
++            if (entity == null || !(entity instanceof EntityPlayer)) { // don't tick non-players here
++                continue;
++            }
++            // CraftBukkit end
++
++            try {
++                ++entity.ticksLived;
++                entity.t_();
++            } catch (Throwable throwable) {
++                crashreport = CrashReport.a(throwable, "Ticking entity");
++                crashreportsystemdetails = crashreport.a("Entity being ticked");
++
++                if (entity == null) crashreportsystemdetails.a("Entity", (Object) "~~NULL~~");
++                else entity.appendEntityCrashDetails(crashreportsystemdetails);
++
++                throw new ReportedException(crashreport);
++            }
++
++            if (entity.dead) {
++                this.k.remove(i--);
++            }
++        }
++
++        this.methodProfiler.c("remove");
++        timings.entityRemoval.startTiming(); // Spigot
++        this.entityList.removeAll(this.g);
++    }
++
+     public boolean a(TileEntity tileentity) {
+         boolean flag = true; // PaperSpigot - Remove unused list
+ 
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index 12e77f1fd..f910cac4a 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -588,18 +588,22 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+     }
+ 
+     public synchronized void tickEntities() {
+-        if (false && this.players.isEmpty()) { // CraftBukkit - this prevents entity cleanup, other issues on servers with no players
++        /*if (false && this.players.isEmpty()) { // CraftBukkit - this prevents entity cleanup, other issues on servers with no players
+             if (this.emptyTime++ >= 1200) {
+                 return;
+             }
+         } else {
+-            this.j();
+-        }
++        }*/
+ 
++        this.j();
+         super.tickEntities();
+         spigotConfig.currentPrimedTnt = 0; // Spigot
+     }
+ 
++    public synchronized void tickPlayers() {
++        super.tickPlayers();
++    }
++
+     public void j() {
+         this.emptyTime = 0;
+     }
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 990a2b0a4..e8e62839a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -484,6 +484,11 @@ public final class CraftServer implements Server {
+         return playerList.getMaxPlayers();
+     }
+ 
++    @Override
++    public void setMaxPlayers(int maxPlayers) {
++        playerList.setMaxPlayers(maxPlayers);
++    }
++
+     // NOTE: These are dependent on the corrisponding call in MinecraftServer
+     // so if that changes this will need to as well
+     @Override
+diff --git a/src/main/java/org/bukkit/craftbukkit/Main.java b/src/main/java/org/bukkit/craftbukkit/Main.java
+index c93621919..3bbdcf14c 100644
+--- a/src/main/java/org/bukkit/craftbukkit/Main.java
++++ b/src/main/java/org/bukkit/craftbukkit/Main.java
+@@ -130,6 +130,14 @@ public class Main {
+                         .defaultsTo(new File("paper.yml"))
+                         .describedAs("Yml file");
+                 // PaperSpigot End
++
++                // BandaidPaper Start
++                acceptsAll(asList("bandaid", "bandaid-settings"), "File for bandaidpaper settings")
++                        .withRequiredArg()
++                        .ofType(File.class)
++                        .defaultsTo(new File("bandaid.yml"))
++                        .describedAs("Yml file");
++                // BandaidPaper End
+             }
+         };
+ 
+-- 
+2.24.1.windows.2
+

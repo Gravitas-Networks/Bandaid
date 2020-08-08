@@ -1,0 +1,198 @@
+From 20c07ffd75643a7002bd4d41812a5b7926831ec9 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 15:58:38 +1000
+Subject: [PATCH] Reset Statistics
+
+t
+
+diff --git a/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java b/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java
+index 0207191c9..9908c25f0 100644
+--- a/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java
++++ b/src/main/java/net/gravitas/bandaidpaper/config/BandaidConfig.java
+@@ -144,8 +144,14 @@ public class BandaidConfig
+     }
+ 
+     public static int maxNoDamageTicks;
+-    private static void MaxNoDamageTicks()
++    private static void maxNoDamageTicks()
+     {
+         maxNoDamageTicks = getInt( "settings.maxNoDamageTicks", 20 );
+     }
++
++    public static boolean storeStatisticsToFile;
++    private static void storeStatisticsToFile()
++    {
++        storeStatisticsToFile = getBoolean( "settings.storeStatisticsToFile", false );
++    }
+ }
+diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
+index f5ffc51e2..7752f7501 100644
+--- a/src/main/java/net/minecraft/server/EntityPlayer.java
++++ b/src/main/java/net/minecraft/server/EntityPlayer.java
+@@ -35,7 +35,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+     public double e;
+     public final List<ChunkCoordIntPair> chunkCoordIntPairQueue = Lists.newLinkedList();
+     public final List<Integer> removeQueue = Lists.newLinkedList();
+-    private final ServerStatisticManager bK;
++    private ServerStatisticManager bK;
+     private float bL = Float.MIN_VALUE;
+     private float bM = -1.0E8F;
+     private int bN = -99999999;
+@@ -1040,6 +1040,11 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+         return this.bK;
+     }
+ 
++    public ServerStatisticManager resetStatisticManager() {
++        this.bK = this.server.getPlayerList().resetStatistics((EntityHuman) this);
++        return this.bK;
++    }
++
+     public void d(Entity entity) {
+         if (entity instanceof EntityHuman) {
+             this.playerConnection.sendPacket(new PacketPlayOutEntityDestroy(new int[] { entity.getId()}));
+diff --git a/src/main/java/net/minecraft/server/PlayerList.java b/src/main/java/net/minecraft/server/PlayerList.java
+index 446c1a2aa..ddb509aba 100644
+--- a/src/main/java/net/minecraft/server/PlayerList.java
++++ b/src/main/java/net/minecraft/server/PlayerList.java
+@@ -15,6 +15,8 @@ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.UUID;
++
++import net.gravitas.bandaidpaper.config.BandaidConfig;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ 
+@@ -1220,24 +1222,33 @@ public abstract class PlayerList {
+         this.sendMessage(ichatbasecomponent, true);
+     }
+ 
++    public ServerStatisticManager resetStatistics(EntityHuman entityhuman) {
++        UUID uuid = entityhuman.getUniqueID();
++        this.o.remove(uuid);
++        return a(entityhuman);
++    }
++
+     public ServerStatisticManager a(EntityHuman entityhuman) {
+         UUID uuid = entityhuman.getUniqueID();
+         ServerStatisticManager serverstatisticmanager = uuid == null ? null : (ServerStatisticManager) this.o.get(uuid);
+ 
+         if (serverstatisticmanager == null) {
+-            File file = new File(this.server.getWorldServer(0).getDataManager().getDirectory(), "stats");
+-            File file1 = new File(file, uuid.toString() + ".json");
++            if (BandaidConfig.storeStatisticsToFile) {
++                File file = new File(this.server.getWorldServer(0).getDataManager().getDirectory(), "stats");
++                File file1 = new File(file, uuid.toString() + ".json");
+ 
+-            if (!file1.exists()) {
+-                File file2 = new File(file, entityhuman.getName() + ".json");
++                if (!file1.exists()) {
++                    File file2 = new File(file, entityhuman.getName() + ".json");
+ 
+-                if (file2.exists() && file2.isFile()) {
+-                    file2.renameTo(file1);
++                    if (file2.exists() && file2.isFile()) {
++                        file2.renameTo(file1);
++                    }
+                 }
++                serverstatisticmanager = new ServerStatisticManager(this.server, file1);
++                serverstatisticmanager.a();
++            }else{
++                serverstatisticmanager = new ServerStatisticManager(this.server);
+             }
+-
+-            serverstatisticmanager = new ServerStatisticManager(this.server, file1);
+-            serverstatisticmanager.a();
+             this.o.put(uuid, serverstatisticmanager);
+         }
+ 
+diff --git a/src/main/java/net/minecraft/server/ServerStatisticManager.java b/src/main/java/net/minecraft/server/ServerStatisticManager.java
+index 22c2ffddf..fdc51f1e6 100644
+--- a/src/main/java/net/minecraft/server/ServerStatisticManager.java
++++ b/src/main/java/net/minecraft/server/ServerStatisticManager.java
+@@ -23,11 +23,24 @@ public class ServerStatisticManager extends StatisticManager {
+ 
+     private static final Logger b = LogManager.getLogger();
+     private final MinecraftServer c;
+-    private final File d;
++    private File d = null;
+     private final Set<Statistic> e = Sets.newHashSet();
+     private int f = -300;
+     private boolean g = false;
+ 
++    public ServerStatisticManager(MinecraftServer minecraftserver) {
++        this.c = minecraftserver;
++        this.d = null;
++        // Spigot start
++        for ( String name : org.spigotmc.SpigotConfig.forcedStats.keySet() )
++        {
++            StatisticWrapper wrapper = new StatisticWrapper();
++            wrapper.a( org.spigotmc.SpigotConfig.forcedStats.get( name ) );
++            a.put( StatisticList.getStatistic( name ), wrapper );
++        }
++        // Spigot end
++    }
++
+     public ServerStatisticManager(MinecraftServer minecraftserver, File file) {
+         this.c = minecraftserver;
+         this.d = file;
+@@ -42,6 +55,7 @@ public class ServerStatisticManager extends StatisticManager {
+     }
+ 
+     public void a() {
++        if (this.d == null) return;
+         if (this.d.isFile()) {
+             try {
+                 this.a.clear();
+@@ -57,6 +71,7 @@ public class ServerStatisticManager extends StatisticManager {
+ 
+     public void b() {
+         if ( org.spigotmc.SpigotConfig.disableStatSaving ) return; // Spigot
++        if (this.d == null) return;
+         try {
+             FileUtils.writeStringToFile(this.d, a(this.a));
+         } catch (IOException ioexception) {
+@@ -96,6 +111,7 @@ public class ServerStatisticManager extends StatisticManager {
+     }
+ 
+     public Map<Statistic, StatisticWrapper> a(String s) {
++        if (this.d == null) return Maps.newHashMap();
+         JsonElement jsonelement = (new JsonParser()).parse(s);
+ 
+         if (!jsonelement.isJsonObject()) {
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index e8e62839a..f262d169f 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -1790,11 +1790,7 @@ public final class CraftServer implements Server {
+         // PaperSpigot start - Add getTPS (Further improve tick loop)
+         @Override
+         public double[] getTPS() {
+-            return new double[] {
+-                    MinecraftServer.getServer().tps1.getAverage(),
+-                    MinecraftServer.getServer().tps5.getAverage(),
+-                    MinecraftServer.getServer().tps15.getAverage()
+-            };
++            return MinecraftServer.getServer().recentTps;
+         }
+         // PaperSpigot end
+ 
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+index d44fc62b9..462055b8e 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftPlayer.java
+@@ -768,6 +768,11 @@ public class CraftPlayer extends CraftHumanEntity implements Player {
+         getHandle().getStatisticManager().setStatistic(getHandle(), nmsStatistic, newValue);
+     }
+ 
++    @Override
++    public void resetStatistics() {
++        getHandle().resetStatisticManager();
++    }
++
+     @Override
+     public void setPlayerTime(long time, boolean relative) {
+         getHandle().timeOffset = time;
+-- 
+2.24.1.windows.2
+

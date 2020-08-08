@@ -1,0 +1,39 @@
+From f6a838ba536db82faa117d00937d849db7d64aae Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 12:16:51 +1000
+Subject: [PATCH] open enchantment
+
+
+diff --git a/src/main/java/net/minecraft/server/Enchantment.java b/src/main/java/net/minecraft/server/Enchantment.java
+index 0f61eeccf..279cc487e 100644
+--- a/src/main/java/net/minecraft/server/Enchantment.java
++++ b/src/main/java/net/minecraft/server/Enchantment.java
+@@ -46,7 +46,24 @@ public abstract class Enchantment {
+         return i >= 0 && i < Enchantment.byId.length ? Enchantment.byId[i] : null;
+     }
+ 
+-    protected Enchantment(int i, MinecraftKey minecraftkey, int j, EnchantmentSlotType enchantmentslottype) {
++    public static int NEXT_ENCHANTMENT_ID = 63;
++
++    public Enchantment(MinecraftKey minecraftkey, int j, EnchantmentSlotType enchantmentslottype) { // protected -> public
++        this.id = NEXT_ENCHANTMENT_ID;
++        NEXT_ENCHANTMENT_ID++;
++        this.weight = j;
++        this.slot = enchantmentslottype;
++        if (Enchantment.byId[this.id] != null) {
++            throw new IllegalArgumentException("Duplicate enchantment id!");
++        } else {
++            Enchantment.byId[this.id] = this;
++            Enchantment.E.put(minecraftkey, this);
++        }
++
++        org.bukkit.enchantments.Enchantment.registerEnchantment(new org.bukkit.craftbukkit.enchantments.CraftEnchantment(this)); // CraftBukkit
++    }
++
++    public Enchantment(int i, MinecraftKey minecraftkey, int j, EnchantmentSlotType enchantmentslottype) { // protected -> public
+         this.id = i;
+         this.weight = j;
+         this.slot = enchantmentslottype;
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,46 @@
+From 4160a2a37d2785fa59b50b7f93cfeabdf71d11fc Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 13:01:42 +1000
+Subject: [PATCH] setMaxPlayers
+
+
+diff --git a/src/main/java/org/bukkit/Bukkit.java b/src/main/java/org/bukkit/Bukkit.java
+index 8fbc8283..69d28a01 100644
+--- a/src/main/java/org/bukkit/Bukkit.java
++++ b/src/main/java/org/bukkit/Bukkit.java
+@@ -161,6 +161,15 @@ public final class Bukkit {
+         return server.getMaxPlayers();
+     }
+ 
++    /**
++     * Get the maximum amount of players which can login to this server.
++     *
++     * @return the amount of players this server allows
++     */
++    public static void setMaxPlayers(int maxPlayers) {
++        server.setMaxPlayers(maxPlayers);
++    }
++
+     /**
+      * Get the game port that the server runs on.
+      *
+diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Server.java
+index 1b62463a..2d9e2e53 100644
+--- a/src/main/java/org/bukkit/Server.java
++++ b/src/main/java/org/bukkit/Server.java
+@@ -134,6 +134,12 @@ public interface Server extends PluginMessageRecipient {
+      * @return the amount of players this server allows
+      */
+     public int getMaxPlayers();
++    /**
++     * Get the maximum amount of players which can login to this server.
++     *
++     * @return the amount of players this server allows
++     */
++    public void setMaxPlayers(int maxPlayers);
+ 
+     /**
+      * Get the game port that the server runs on.
+-- 
+2.24.1.windows.2
+

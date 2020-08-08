@@ -1,0 +1,249 @@
+From 798224490796faacbefe0a00f6ccd65f0b4968ff Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 12:16:47 +1000
+Subject: [PATCH] only tick worlds and entities every main tick
+
+
+diff --git a/src/main/java/net/minecraft/server/EntityArrow.java b/src/main/java/net/minecraft/server/EntityArrow.java
+index 2ef064abc..c43b6a773 100644
+--- a/src/main/java/net/minecraft/server/EntityArrow.java
++++ b/src/main/java/net/minecraft/server/EntityArrow.java
+@@ -315,7 +315,7 @@ public class EntityArrow extends Entity implements IProjectile {
+                     this.locZ -= this.motZ / (double) f1 * 0.05000000074505806D;
+                     this.makeSound("random.bowhit", 1.0F, 1.2F / (this.random.nextFloat() * 0.2F + 0.9F));
+                     this.inGround = true;
+-                    this.shake = 7;
++                    this.shake = 7;     
+                     this.setCritical(false);
+                     if (this.g.getMaterial() != Material.AIR) {
+                         this.g.a(this.world, blockposition1, iblockdata1, (Entity) this);
+@@ -329,9 +329,9 @@ public class EntityArrow extends Entity implements IProjectile {
+                 }
+             }
+ 
+-            this.locX += this.motX / (double) MinecraftServer.getMultiplier();
+-            this.locY += this.motY / (double) MinecraftServer.getMultiplier();
+-            this.locZ += this.motZ / (double) MinecraftServer.getMultiplier();
++            this.locX += (this.motX);
++            this.locY += (this.motY);
++            this.locZ += (this.motZ);
+             f2 = MathHelper.sqrt(this.motX * this.motX + this.motZ * this.motZ);
+             this.yaw = (float) (MathHelper.b(this.motX, this.motZ) * 180.0D / 3.1415927410125732D);
+ 
+diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
+index 0c49a256c..71f052d3f 100644
+--- a/src/main/java/net/minecraft/server/EntityPlayer.java
++++ b/src/main/java/net/minecraft/server/EntityPlayer.java
+@@ -297,10 +297,7 @@ public class EntityPlayer extends EntityHuman implements ICrafting {
+ 
+                 if (itemstack != null && itemstack.getItem().f()) {
+                     Packet packet = ((ItemWorldMapBase) itemstack.getItem()).c(itemstack, this.world, this);
+-
+-                    if (packet != null) {
+-                        this.playerConnection.sendPacket(packet);
+-                    }
++                    if (packet != null) this.playerConnection.sendPacket(packet);
+                 }
+             }
+ 
+diff --git a/src/main/java/net/minecraft/server/EntityProjectile.java b/src/main/java/net/minecraft/server/EntityProjectile.java
+index f0634ab98..1e11c5f3b 100644
+--- a/src/main/java/net/minecraft/server/EntityProjectile.java
++++ b/src/main/java/net/minecraft/server/EntityProjectile.java
+@@ -171,10 +171,9 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
+             }
+         }
+ 
+-        this.locX += this.motX / (double) MinecraftServer.getMultiplier();;
+-        this.locY += this.motY / (double) MinecraftServer.getMultiplier();;
+-        this.locZ += this.motZ / (double) MinecraftServer.getMultiplier();;
+-        float f1 = MathHelper.sqrt(this.motX * this.motX + this.motZ * this.motZ);
++        this.locX += this.motX;
++        this.locY += this.motY;
++        this.locZ += this.motZ;
+ 
+         this.yaw = (float) (MathHelper.b(this.motX, this.motZ) * 180.0D / 3.1415927410125732D);
+ 
+@@ -200,12 +199,10 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
+         float f3 = this.m();
+ 
+         if (this.V()) {
++            float f4 = 0.25F;
+             for (int j = 0; j < 4; ++j) {
+-                float f4 = 0.25F;
+-
+                 this.world.addParticle(EnumParticle.WATER_BUBBLE, this.locX - this.motX * (double) f4, this.locY - this.motY * (double) f4, this.locZ - this.motZ * (double) f4, this.motX, this.motY, this.motZ, new int[0]);
+             }
+-
+             f2 = 0.8F;
+         }
+ 
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index ebfd58a72..020b4af38 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -788,7 +788,7 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+ 
+         SpigotTimings.bukkitSchedulerTimer.startTiming(); // Spigot
+         // CraftBukkit start
+-        if (this.ticks % getMultiplier() == 0) this.server.getScheduler().mainThreadHeartbeat(this.ticks);
++        this.server.getScheduler().mainThreadHeartbeat(this.ticks);
+         SpigotTimings.bukkitSchedulerTimer.stopTiming(); // Spigot
+ 
+         // Run tasks that are waiting on processing
+@@ -815,24 +815,15 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+         int i;
+ 
+         for (i = 0; i < this.worlds.size(); ++i) {
+-            long j = System.nanoTime();
++            WorldServer worldserver = this.worlds.get(i);
+ 
+-            // if (i == 0 || this.getAllowNether()) {
+-                WorldServer worldserver = this.worlds.get(i);
++            this.methodProfiler.a(worldserver.getWorldData().getName());
+ 
+-                this.methodProfiler.a(worldserver.getWorldData().getName());
+-                /* Drop global time updates
+-                if (this.ticks % 20 == 0) {
+-                    this.methodProfiler.a("timeSync");
+-                    this.v.a(new PacketPlayOutUpdateTime(worldserver.getTime(), worldserver.getDayTime(), worldserver.getGameRules().getBoolean("doDaylightCycle")), worldserver.worldProvider.getDimension());
+-                    this.methodProfiler.b();
+-                }
+-                // CraftBukkit end */
++            this.methodProfiler.a("tick");
+ 
+-                this.methodProfiler.a("tick");
+-
+-                CrashReport crashreport;
++            CrashReport crashreport;
+ 
++            if (this.ticks % MinecraftServer.getMultiplier() == 0) { // only increment world time every multiplier tick
+                 try {
+                     worldserver.timings.doTick.startTiming(); // Spigot
+                     worldserver.doTick();
+@@ -840,39 +831,42 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+                 } catch (Throwable throwable) {
+                     // Spigot Start
+                     try {
+-                    crashreport = CrashReport.a(throwable, "Exception ticking world");
+-                    } catch (Throwable t){
++                        crashreport = CrashReport.a(throwable, "Exception ticking world");
++                    } catch (Throwable t) {
+                         throw new RuntimeException("Error generating crash report", t);
+                     }
+                     // Spigot End
+                     worldserver.a(crashreport);
+                     throw new ReportedException(crashreport);
+                 }
++            }
+ 
++            if (this.ticks % MinecraftServer.getMultiplier() == 0) { // only tick entities every multiplier tick
+                 try {
+                     worldserver.timings.tickEntities.startTiming(); // Spigot
+                     worldserver.tickEntities();
+                     worldserver.timings.tickEntities.stopTiming(); // Spigot
+                 } catch (Throwable throwable1) {
+-                    // Spigot Start
++                    // Spigot
+                     try {
+-                    crashreport = CrashReport.a(throwable1, "Exception ticking world entities");
+-                    } catch (Throwable t){
++                        crashreport = CrashReport.a(throwable1, "Exception ticking world entities");
++                    } catch (Throwable t) {
+                         throw new RuntimeException("Error generating crash report", t);
+                     }
+                     // Spigot End
+                     worldserver.a(crashreport);
+                     throw new ReportedException(crashreport);
+                 }
++            }
+ 
+-                this.methodProfiler.b();
+-                this.methodProfiler.a("tracker");
+-                worldserver.timings.tracker.startTiming(); // Spigot
+-                worldserver.getTracker().updatePlayers();
+-                worldserver.timings.tracker.stopTiming(); // Spigot
+-                this.methodProfiler.b();
+-                this.methodProfiler.b();
+-                worldserver.explosionDensityCache.clear(); // PaperSpigot - Optimize explosions
++            this.methodProfiler.b();
++            this.methodProfiler.a("tracker");
++            worldserver.timings.tracker.startTiming(); // Spigot
++            worldserver.getTracker().updatePlayers();
++            worldserver.timings.tracker.stopTiming(); // Spigot
++            this.methodProfiler.b();
++            this.methodProfiler.b();
++            worldserver.explosionDensityCache.clear(); // PaperSpigot - Optimize explosions
+             // } // CraftBukkit
+ 
+             // this.i[i][this.ticks % 100] = System.nanoTime() - j; // CraftBukkit
+diff --git a/src/main/java/net/minecraft/server/World.java b/src/main/java/net/minecraft/server/World.java
+index 8f3511f80..f3a7768b4 100644
+--- a/src/main/java/net/minecraft/server/World.java
++++ b/src/main/java/net/minecraft/server/World.java
+@@ -1359,7 +1359,7 @@ public abstract class World implements IBlockAccess {
+ 
+     public void b(BlockPosition blockposition, Block block, int i, int j) {}
+ 
+-    public void tickEntities() {
++    public synchronized void tickEntities() {
+         this.methodProfiler.a("entities");
+         this.methodProfiler.a("global");
+ 
+@@ -1382,11 +1382,9 @@ public abstract class World implements IBlockAccess {
+             } catch (Throwable throwable) {
+                 crashreport = CrashReport.a(throwable, "Ticking entity");
+                 crashreportsystemdetails = crashreport.a("Entity being ticked");
+-                if (entity == null) {
+-                    crashreportsystemdetails.a("Entity", (Object) "~~NULL~~");
+-                } else {
+-                    entity.appendEntityCrashDetails(crashreportsystemdetails);
+-                }
++
++                if (entity == null) crashreportsystemdetails.a("Entity", (Object) "~~NULL~~");
++                else entity.appendEntityCrashDetails(crashreportsystemdetails);
+ 
+                 throw new ReportedException(crashreport);
+             }
+@@ -1426,7 +1424,7 @@ public abstract class World implements IBlockAccess {
+         guardEntityList = true; // Spigot
+         // CraftBukkit start - Use field for loop variable
+         co.aikar.timings.TimingHistory.entityTicks += this.entityList.size(); // Spigot
+-        int entitiesThisCycle = 0;
++
+         // PaperSpigot start - Disable tick limiters
+         //if (tickPosition < 0) tickPosition = 0;
+         for (tickPosition = 0; tickPosition < entityList.size(); tickPosition++) {
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index 87529552a..12e77f1fd 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -203,7 +203,7 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+     }
+     // CraftBukkit end
+ 
+-    public void doTick() {
++    public synchronized void doTick() {
+         super.doTick();
+         if (this.getWorldData().isHardcore() && this.getDifficulty() != EnumDifficulty.HARD) {
+             this.getWorldData().setDifficulty(EnumDifficulty.HARD);
+@@ -213,7 +213,6 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+         if (this.everyoneDeeplySleeping()) {
+             if (this.getGameRules().getBoolean("doDaylightCycle")) {
+                 long i = this.worldData.getDayTime() + 24000L;
+-
+                 this.worldData.setDayTime(i - i % 24000L);
+             }
+ 
+@@ -588,7 +587,7 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+ 
+     }
+ 
+-    public void tickEntities() {
++    public synchronized void tickEntities() {
+         if (false && this.players.isEmpty()) { // CraftBukkit - this prevents entity cleanup, other issues on servers with no players
+             if (this.emptyTime++ >= 1200) {
+                 return;
+-- 
+2.24.1.windows.2
+

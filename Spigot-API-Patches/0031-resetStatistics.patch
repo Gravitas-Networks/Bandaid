@@ -1,0 +1,25 @@
+From 6df66ed0d6a9fc1df7e2edc19d20f3812ae1ce8e Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sat, 8 Aug 2020 15:55:15 +1000
+Subject: [PATCH] resetStatistics
+
+
+diff --git a/src/main/java/org/bukkit/entity/Player.java b/src/main/java/org/bukkit/entity/Player.java
+index a607013a..9ee41beb 100644
+--- a/src/main/java/org/bukkit/entity/Player.java
++++ b/src/main/java/org/bukkit/entity/Player.java
+@@ -738,6 +738,11 @@ public interface Player extends HumanEntity, Conversable, CommandSender, Offline
+      */
+     public void setStatistic(Statistic statistic, EntityType entityType, int newValue);
+ 
++    /**
++     * Resets all statistics
++     */
++    public void resetStatistics();
++
+     /**
+      * Sets the current time on the player's client. When relative is true the
+      * player's time will be kept synchronized to its world time with the
+-- 
+2.24.1.windows.2
+
