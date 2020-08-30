@@ -1,4 +1,4 @@
-From 4c6a4a4003ad20db7e11b653945a102070457a31 Mon Sep 17 00:00:00 2001
+From 913ee9d5117f1d16a578ab956a72bef7ba4d14ea Mon Sep 17 00:00:00 2001
 From: Gatt <gatt@gatt.space>
 Date: Sat, 8 Aug 2020 15:10:37 +1000
 Subject: [PATCH] BandaidConfig TPS and Max No Damage Ticks

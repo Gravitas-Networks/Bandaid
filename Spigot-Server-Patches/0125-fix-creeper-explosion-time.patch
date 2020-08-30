@@ -1,0 +1,46 @@
+From 7a59b61bd9b28f5fa0e7612cd6cfaaa625eb0e09 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Tue, 25 Aug 2020 19:22:08 +1000
+Subject: [PATCH] fix creeper explosion time
+
+
+diff --git a/src/main/java/net/minecraft/server/EntityCreeper.java b/src/main/java/net/minecraft/server/EntityCreeper.java
+index 5b07345a0..14a256b35 100644
+--- a/src/main/java/net/minecraft/server/EntityCreeper.java
++++ b/src/main/java/net/minecraft/server/EntityCreeper.java
+@@ -9,7 +9,7 @@ public class EntityCreeper extends EntityMonster {
+ 
+     private int a;
+     private int fuseTicks;
+-    private int maxFuseTicks = 30 * MinecraftServer.getExpectedTPS();
++    private int maxFuseTicks = (int) (30 * MinecraftServer.getMultiplier());
+     private int explosionRadius = 3;
+     private int bn = 0;
+     private int record = -1; // CraftBukkit
+diff --git a/src/main/java/net/minecraft/server/PlayerInteractManager.java b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+index 61ba1696b..e66c7a69b 100644
+--- a/src/main/java/net/minecraft/server/PlayerInteractManager.java
++++ b/src/main/java/net/minecraft/server/PlayerInteractManager.java
+@@ -370,9 +370,7 @@ public class PlayerInteractManager {
+                     ItemStack[] droppedItems = iblockdata.getBlock().getDrops(this.world, this.player, blockposition, iblockdata, tileentity);
+                     if (droppedItems.length > 0){
+                         List<org.bukkit.inventory.ItemStack> bukkitItemDrops = new ArrayList<>();
+-                        for (ItemStack dI : droppedItems) {
+-                            bukkitItemDrops.add(CraftItemStack.asBukkitCopy(dI));
+-                        }
++                        for (ItemStack dI : droppedItems) bukkitItemDrops.add(CraftItemStack.asBukkitCopy(dI));
+ 
+                         BlockBreakDropItemsEvent blockBreakDropItemsEvent = new BlockBreakDropItemsEvent(block, player.getBukkitEntity().getPlayer(),
+                                 bukkitItemDrops, EnchantmentManager.hasSilkTouchEnchantment(player));
+@@ -384,8 +382,6 @@ public class PlayerInteractManager {
+                                 Block.a(this.world, blockposition, CraftItemStack.asNMSCopy(drop));
+                             }
+                         }
+-
+-
+                     }
+                     // BandaidPaper end
+ 
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,68 @@
+From 6bd617a72c73015245fa0ecf56594a711c24d0c3 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Tue, 25 Aug 2020 20:20:29 +1000
+Subject: [PATCH] fix blockbreak event
+
+
+diff --git a/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
+index 2c2e4a38..1cd33b5a 100644
+--- a/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
++++ b/src/main/java/net/gravitas/bandiadpaper/events/blocks/BlockBreakDropItemsEvent.java
+@@ -1,6 +1,9 @@
+ package net.gravitas.bandiadpaper.events.blocks;
+ 
++import org.bukkit.Location;
++import org.bukkit.Material;
+ import org.bukkit.block.Block;
++import org.bukkit.block.BlockState;
+ import org.bukkit.entity.Player;
+ import org.bukkit.event.Cancellable;
+ import org.bukkit.event.HandlerList;
+@@ -19,11 +22,25 @@ public class BlockBreakDropItemsEvent extends BlockEvent implements Cancellable
+ 
+     public static HandlerList getHandlerList() { return handlers; }
+ 
++    private Location blockLocation;
++    private Material blockMaterial;
++    private BlockState blockState;
++
+     private final Player player;
+     private boolean cancel = false;
+     private List<ItemStack> drops;
+     private final boolean isSilkTouch;
+ 
++    public BlockBreakDropItemsEvent(Block theBlock, Location blockLocation, Material blockMaterial, BlockState blockState, Player player, List<ItemStack> drops, boolean isSilkTouch) {
++        super(theBlock);
++        this.blockLocation = blockLocation;
++        this.blockMaterial = blockMaterial;
++        this.blockState = blockState;
++        this.player = player;
++        this.drops = drops;
++        this.isSilkTouch = isSilkTouch;
++    }
++
+     public BlockBreakDropItemsEvent(Block theBlock, Player player, List<ItemStack> drops, boolean isSilkTouch) {
+         super(theBlock);
+         this.player = player;
+@@ -46,6 +63,18 @@ public class BlockBreakDropItemsEvent extends BlockEvent implements Cancellable
+         return drops;
+     }
+ 
++    public Location getBlockLocation() {
++        return blockLocation;
++    }
++
++    public Material getBlockMaterial() {
++        return blockMaterial;
++    }
++
++    public BlockState getBlockState() {
++        return blockState;
++    }
++
+     public void setDrops(List<ItemStack> drops) {
+         this.drops = drops;
+     }
+-- 
+2.24.1.windows.2
+

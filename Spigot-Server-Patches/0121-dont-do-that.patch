@@ -1,0 +1,48 @@
+From 77ebaa6fa0b91ee1b7a8524e5e5eb83c7e133185 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Tue, 11 Aug 2020 19:54:20 +1000
+Subject: [PATCH] dont do that
+
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 2f1ec1fbe..125490542 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -734,7 +734,7 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+ 
+         this.methodProfiler.a("root");
+         this.B();
+-        if (i - this.X >= 5000000000L) {
++        /*if (i - this.X >= 5000000000L) {
+             this.X = i;
+             this.r.setPlayerSample(new ServerPing.ServerPingPlayerSample(this.J(), this.I()));
+             GameProfile[] agameprofile = new GameProfile[Math.min(this.I(), 12)];
+@@ -746,7 +746,7 @@ public abstract class MinecraftServer implements Runnable, ICommandListener, IAs
+ 
+             Collections.shuffle(Arrays.asList(agameprofile));
+             this.r.b().a(agameprofile);
+-        }
++        }*/
+ 
+         if (autosavePeriod > 0 && this.ticks % autosavePeriod == 0) { // CraftBukkit
+             SpigotTimings.worldSaveTimer.startTiming(); // Spigot
+diff --git a/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java b/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
+index 1fa64b1e7..4f9179908 100644
+--- a/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
++++ b/src/main/java/org/bukkit/craftbukkit/entity/CraftEntity.java
+@@ -215,9 +215,9 @@ public abstract class CraftEntity implements org.bukkit.entity.Entity {
+         }
+         // Paper end
+ 
+-        entity.motX = vel.getX() / MinecraftServer.getMultiplier();
+-        entity.motY = vel.getY() / MinecraftServer.getMultiplier();
+-        entity.motZ = vel.getZ() / MinecraftServer.getMultiplier();
++        entity.motX = vel.getX();
++        entity.motY = vel.getY();
++        entity.motZ = vel.getZ();
+         entity.velocityChanged = true;
+     }
+ 
+-- 
+2.24.1.windows.2
+

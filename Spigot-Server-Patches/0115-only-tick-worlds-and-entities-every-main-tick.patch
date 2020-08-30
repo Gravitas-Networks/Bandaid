@@ -1,14 +1,14 @@
-From 798224490796faacbefe0a00f6ccd65f0b4968ff Mon Sep 17 00:00:00 2001
+From c35738b7b9cbefb0d8d9fd466b26b7ff031081eb Mon Sep 17 00:00:00 2001
 From: Gatt <gatt@gatt.space>
 Date: Sat, 8 Aug 2020 12:16:47 +1000
 Subject: [PATCH] only tick worlds and entities every main tick
 
 
 diff --git a/src/main/java/net/minecraft/server/EntityArrow.java b/src/main/java/net/minecraft/server/EntityArrow.java
-index 2ef064abc..c43b6a773 100644
+index 0a3f84762..4115734e5 100644
 --- a/src/main/java/net/minecraft/server/EntityArrow.java
 +++ b/src/main/java/net/minecraft/server/EntityArrow.java
-@@ -315,7 +315,7 @@ public class EntityArrow extends Entity implements IProjectile {
+@@ -317,7 +317,7 @@ public class EntityArrow extends Entity implements IProjectile {
                      this.locZ -= this.motZ / (double) f1 * 0.05000000074505806D;
                      this.makeSound("random.bowhit", 1.0F, 1.2F / (this.random.nextFloat() * 0.2F + 0.9F));
                      this.inGround = true;
@@ -17,19 +17,6 @@ index 2ef064abc..c43b6a773 100644
                      this.setCritical(false);
                      if (this.g.getMaterial() != Material.AIR) {
                          this.g.a(this.world, blockposition1, iblockdata1, (Entity) this);
-@@ -329,9 +329,9 @@ public class EntityArrow extends Entity implements IProjectile {
-                 }
-             }
- 
--            this.locX += this.motX / (double) MinecraftServer.getMultiplier();
--            this.locY += this.motY / (double) MinecraftServer.getMultiplier();
--            this.locZ += this.motZ / (double) MinecraftServer.getMultiplier();
-+            this.locX += (this.motX);
-+            this.locY += (this.motY);
-+            this.locZ += (this.motZ);
-             f2 = MathHelper.sqrt(this.motX * this.motX + this.motZ * this.motZ);
-             this.yaw = (float) (MathHelper.b(this.motX, this.motZ) * 180.0D / 3.1415927410125732D);
- 
 diff --git a/src/main/java/net/minecraft/server/EntityPlayer.java b/src/main/java/net/minecraft/server/EntityPlayer.java
 index 0c49a256c..71f052d3f 100644
 --- a/src/main/java/net/minecraft/server/EntityPlayer.java
@@ -47,24 +34,10 @@ index 0c49a256c..71f052d3f 100644
              }
  
 diff --git a/src/main/java/net/minecraft/server/EntityProjectile.java b/src/main/java/net/minecraft/server/EntityProjectile.java
-index f0634ab98..1e11c5f3b 100644
+index 6477e2f02..4dd6d4a24 100644
 --- a/src/main/java/net/minecraft/server/EntityProjectile.java
 +++ b/src/main/java/net/minecraft/server/EntityProjectile.java
-@@ -171,10 +171,9 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
-             }
-         }
- 
--        this.locX += this.motX / (double) MinecraftServer.getMultiplier();;
--        this.locY += this.motY / (double) MinecraftServer.getMultiplier();;
--        this.locZ += this.motZ / (double) MinecraftServer.getMultiplier();;
--        float f1 = MathHelper.sqrt(this.motX * this.motX + this.motZ * this.motZ);
-+        this.locX += this.motX;
-+        this.locY += this.motY;
-+        this.locZ += this.motZ;
- 
-         this.yaw = (float) (MathHelper.b(this.motX, this.motZ) * 180.0D / 3.1415927410125732D);
- 
-@@ -200,12 +199,10 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
+@@ -201,12 +201,10 @@ public abstract class EntityProjectile extends Entity implements IProjectile {
          float f3 = this.m();
  
          if (this.V()) {

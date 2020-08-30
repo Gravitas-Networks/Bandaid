@@ -1,0 +1,31 @@
+From 4997c5e8b554e695244cf3bec4beba6c1e3bb98e Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Sun, 9 Aug 2020 21:42:11 +1000
+Subject: [PATCH] synchronize ticks
+
+
+diff --git a/src/main/java/net/minecraft/server/WorldServer.java b/src/main/java/net/minecraft/server/WorldServer.java
+index 9ff524f2d..f910cac4a 100644
+--- a/src/main/java/net/minecraft/server/WorldServer.java
++++ b/src/main/java/net/minecraft/server/WorldServer.java
+@@ -587,7 +587,7 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+ 
+     }
+ 
+-    public void tickEntities() {
++    public synchronized void tickEntities() {
+         /*if (false && this.players.isEmpty()) { // CraftBukkit - this prevents entity cleanup, other issues on servers with no players
+             if (this.emptyTime++ >= 1200) {
+                 return;
+@@ -600,7 +600,7 @@ public class WorldServer extends World implements IAsyncTaskHandler {
+         spigotConfig.currentPrimedTnt = 0; // Spigot
+     }
+ 
+-    public void tickPlayers() {
++    public synchronized void tickPlayers() {
+         super.tickPlayers();
+     }
+ 
+-- 
+2.24.1.windows.2
+

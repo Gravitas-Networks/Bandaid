@@ -1,0 +1,33 @@
+From 30497d1739e63f086f933d16caf23ccee762aefa Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Fri, 14 Aug 2020 23:10:55 +1000
+Subject: [PATCH] fix air time
+
+
+diff --git a/src/main/java/net/minecraft/server/EntityLiving.java b/src/main/java/net/minecraft/server/EntityLiving.java
+index 3b4c41aaa..ea81b892e 100644
+--- a/src/main/java/net/minecraft/server/EntityLiving.java
++++ b/src/main/java/net/minecraft/server/EntityLiving.java
+@@ -93,7 +93,7 @@ public abstract class EntityLiving extends Entity {
+     private float bo;
+     // CraftBukkit start
+     public int expToDrop;
+-    public int maxAirTicks = 300 * MinecraftServer.getExpectedTPS();
++    public int maxAirTicks = (int) (300 * MinecraftServer.getMultiplier());
+     ArrayList<org.bukkit.inventory.ItemStack> drops = null;
+     // CraftBukkit end
+     // Spigot start
+diff --git a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
+index 7c89c6d1a..21739e304 100644
+--- a/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
++++ b/src/main/java/org/bukkit/craftbukkit/scheduler/CraftTask.java
+@@ -1,5 +1,6 @@
+ package org.bukkit.craftbukkit.scheduler;
+ 
++import net.minecraft.server.MinecraftServer;
+ import org.bukkit.Bukkit;
+ import co.aikar.timings.SpigotTimings; // Spigot
+ import co.aikar.timings.Timing; // Spigot
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,60 @@
+From 9d93801446b2f5918698bc0a151984b4d26c7341 Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Fri, 14 Aug 2020 23:06:24 +1000
+Subject: [PATCH] fuck stackables in particular
+
+ff
+
+diff --git a/src/main/java/org/github/paperspigot/PaperSpigotConfig.java b/src/main/java/org/github/paperspigot/PaperSpigotConfig.java
+index d6d9899e2..046e8d46a 100644
+--- a/src/main/java/org/github/paperspigot/PaperSpigotConfig.java
++++ b/src/main/java/org/github/paperspigot/PaperSpigotConfig.java
+@@ -179,42 +179,9 @@ public class PaperSpigotConfig
+     public static boolean stackableMilkBuckets;
+     private static void stackableBuckets()
+     {
+-        stackableLavaBuckets = getBoolean( "stackable-buckets.lava", false );
+-        stackableWaterBuckets = getBoolean( "stackable-buckets.water", false );
+-        stackableMilkBuckets = getBoolean( "stackable-buckets.milk", false );
+-
+-        Field maxStack;
+-
+-        try {
+-            maxStack = Material.class.getDeclaredField("maxStack");
+-            maxStack.setAccessible(true);
+-
+-            Field modifiers = Field.class.getDeclaredField("modifiers");
+-            modifiers.setAccessible(true);
+-            modifiers.setInt(maxStack, maxStack.getModifiers() & ~Modifier.FINAL);
+-        } catch (Exception e) {
+-            e.printStackTrace();
+-            return;
+-        }
+-
+-        try {
+-            if (stackableLavaBuckets) {
+-                maxStack.set(Material.LAVA_BUCKET, Material.BUCKET.getMaxStackSize());
+-                Items.LAVA_BUCKET.c(Material.BUCKET.getMaxStackSize());
+-            }
+-
+-            if (stackableWaterBuckets) {
+-                maxStack.set(Material.WATER_BUCKET, Material.BUCKET.getMaxStackSize());
+-                Items.WATER_BUCKET.c(Material.BUCKET.getMaxStackSize());
+-            }
+-
+-            if (stackableMilkBuckets) {
+-                maxStack.set(Material.MILK_BUCKET, Material.BUCKET.getMaxStackSize());
+-                Items.MILK_BUCKET.c(Material.BUCKET.getMaxStackSize());
+-            }
+-        } catch (Exception e) {
+-            e.printStackTrace();
+-        }
++        stackableLavaBuckets = false;
++        stackableWaterBuckets = false;
++        stackableMilkBuckets = false;
+     }
+ 
+     public static boolean warnForExcessiveVelocity;
+-- 
+2.24.1.windows.2
+

@@ -1,0 +1,70 @@
+From 1c5ca4646758def7b715459f967562fce7dbdedd Mon Sep 17 00:00:00 2001
+From: Gatt <gatt@gatt.space>
+Date: Tue, 25 Aug 2020 17:22:26 +1000
+Subject: [PATCH] fix "no item!" error
+
+
+diff --git a/src/main/java/net/minecraft/server/EntityItem.java b/src/main/java/net/minecraft/server/EntityItem.java
+index 1f8b1c726..39f99212b 100644
+--- a/src/main/java/net/minecraft/server/EntityItem.java
++++ b/src/main/java/net/minecraft/server/EntityItem.java
+@@ -324,25 +324,16 @@ public class EntityItem extends Entity {
+             // CraftBukkit end
+ 
+             if (this.pickupDelay == 0 && (this.g == null || 6000 - this.age <= 200 || this.g.equals(entityhuman.getName())) && entityhuman.inventory.pickup(itemstack)) {
+-                if (itemstack.getItem() == Item.getItemOf(Blocks.LOG)) {
+-                    entityhuman.b((Statistic) AchievementList.g);
+-                }
++                if (itemstack.getItem() == Item.getItemOf(Blocks.LOG) || itemstack.getItem() == Item.getItemOf(Blocks.LOG2)) entityhuman.b((Statistic) AchievementList.g);
+ 
+-                if (itemstack.getItem() == Item.getItemOf(Blocks.LOG2)) {
+-                    entityhuman.b((Statistic) AchievementList.g);
+-                }
+ 
+-                if (itemstack.getItem() == Items.LEATHER) {
+-                    entityhuman.b((Statistic) AchievementList.t);
+-                }
++                if (itemstack.getItem() == Items.LEATHER) entityhuman.b((Statistic) AchievementList.t);
+ 
+-                if (itemstack.getItem() == Items.DIAMOND) {
+-                    entityhuman.b((Statistic) AchievementList.w);
+-                }
+ 
+-                if (itemstack.getItem() == Items.BLAZE_ROD) {
+-                    entityhuman.b((Statistic) AchievementList.A);
+-                }
++                if (itemstack.getItem() == Items.DIAMOND) entityhuman.b((Statistic) AchievementList.w);
++
++
++                if (itemstack.getItem() == Items.BLAZE_ROD) entityhuman.b((Statistic) AchievementList.A);
+ 
+                 if (itemstack.getItem() == Items.DIAMOND && this.n() != null) {
+                     EntityHuman entityhuman1 = this.world.a(this.n());
+@@ -375,21 +366,15 @@ public class EntityItem extends Entity {
+ 
+     public void c(int i) {
+         super.c(i);
+-        if (!this.world.isClientSide) {
+-            this.w();
+-        }
+-
++        if (!this.world.isClientSide) this.w();
+     }
+ 
+     public ItemStack getItemStack() {
+         ItemStack itemstack = this.getDataWatcher().getItemStack(10);
+ 
+         if (itemstack == null) {
+-            if (this.world != null) {
+-                EntityItem.b.error("Item entity " + this.getId() + " has no item?!");
+-            }
+-
+-            return new ItemStack(Blocks.STONE);
++            this.die();
++            return new ItemStack(Blocks.AIR);
+         } else {
+             return itemstack;
+         }
+-- 
+2.24.1.windows.2
+
